@@ -5,7 +5,7 @@ on:
     branches: [ main, master ]
   workflow_dispatch:
 
-jobs:
+Python 3.10
   build:
     runs-on: ubuntu-latest
 
