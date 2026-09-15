@@ -1,33 +1,3 @@
-name: GN Algo Matrix Live Data & Signal Server
-
-on:
-  schedule:
-    # Market hours automation (Mon-Fri active schedule)
-    - cron: '30 3 * * 1-5' # Runs around market opening UTC mapped to IST
-  workflow_dispatch:
-
-jobs:
-  run-signal-server:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-
-      - name: Install Dependencies
-        run: |
-          pip install aiohttp requests
-
-      - name: Launch Automated Trading Server
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: |
-          python data_server.py
 import time
 import asyncio
 import logging
@@ -51,17 +21,15 @@ class ProductionSignalEngine:
         self.chat_id = os.environ.get("TELEGRAM_CHAT_ID")
 
     async def start_engine(self):
-        logging.info(f"🚀 GN Algo Matrix Server Active for {self.symbol}...")
-        url = "https://your-target-nse-endpoint/live" # Aapka primary data endpoint link yahan configure hoga
+        logging.info(f"GN Algo Matrix Server Active for {self.symbol}...")
         
-        # Session loop for 24/7 background monitoring
         while True:
             try:
-                # Simulating live tick check or real connection hook
-                current_price, current_volume = 24500.0, 1500000 # Live feed placeholder variable
+                # Live feed tick simulation / integration point
+                current_price, current_volume = 24500.0, 1500000 
                 await self.evaluate_triggers(current_price, current_volume)
             except Exception as e:
-                logging.error(f"Engine exception caught: {e}. Retrying in 2 seconds...")
+                logging.error(f"Engine exception caught: {e}. Retrying...")
                 await asyncio.sleep(2)
             
             await asyncio.sleep(1)
@@ -109,8 +77,10 @@ class ProductionSignalEngine:
             except Exception as ex:
                 logging.error(f"Failed to push Telegram notification: {ex}")
         else:
-            print(msg) # Fallback console output
+            print(msg)
 
 if __name__ == "__main__":
     engine = ProductionSignalEngine()
+    # To run on server/local:
     # asyncio.run(engine.start_engine())
+  
