@@ -17,6 +17,14 @@ jobs:
         with:
           python-version: '3.10'
 
+      - name: Setup Swap Space (Prevent Out-Of-Memory Crash)
+        run: |
+          sudo swapoff -a
+          sudo fallocate -l 4G /swapfile
+          sudo chmod 600 /swapfile
+          sudo mkswap /swapfile
+          sudo swapon /swapfile
+
       - name: Install dependencies
         run: |
           sudo apt-get update
