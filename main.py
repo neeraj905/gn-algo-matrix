@@ -1,22 +1,22 @@
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
-from kivy.uix.button import Button
-from kivy.uix.scrollview import ScrollView
 from kivy.clock import Clock
 import threading
 import time
-import os
 import requests
 from datetime import datetime
 
 class TradingEngine:
     def __init__(self):
         self.indices = ["Nifty 50", "Bank Nifty", "Sensex"]
-        self.signals = {index: "WAITING FOR SIGNAL" for index in self.indices}
+        self.signals = {index: "HOLD / MONITOR" for index in self.indices}
         self.prices = {index: "0.00" for index in self.indices}
-        self.token = os.environ.get("TELEGRAM_BOT_TOKEN")
-        self.chat_id = os.environ.get("TELEGRAM_CHAT_ID")
+        self.colors = {index: "ffffff" for index in self.indices}
+        
+        # Aapke credentials yahan seedha fit kar diye gaye hain
+        self.token = "8642396544:AAFJVudpn9zWK13a-SweJIkChoKExAk565A"
+        self.chat_id = "6606431950"
         self.running = True
 
     def send_telegram_alert(self, index_name, signal_type, price):
@@ -40,70 +40,75 @@ class TradingEngine:
                 print(f"Telegram error: {e}")
 
     def run_simulation(self):
-        # Yahan aap apna live data feed ya Tradetron/API integration jod sakte hain
         import random
         while self.running:
             for idx in self.indices:
-                # Simulating live movement for testing; replace with actual feed/algo logic
                 dummy_price = round(random.uniform(20000, 50000), 2)
-                self.prices[idx] = str(dummy_price)
+                self.prices[idx] = f"{dummy_price:,.2f}"
                 
-                # Example condition for signal generation
                 rand_val = random.random()
-                if rand_val > 0.8:
-                    self.signals[idx] = "🟢 STRONG BUY (CALL)"
-                    self.send_telegram_alert(idx, "STRONG BUY (CALL)", dummy_price)
-                elif rand_val < 0.2:
-                    self.signals[idx] = "🔴 STRONG SELL (PUT)"
-                    self.send_telegram_alert(idx, "STRONG SELL (PUT)", dummy_price)
+                if rand_val > 0.75:
+                    self.signals[idx] = "STRONG BUY (CALL)"
+                    self.colors[idx] = "00ff00" # Bright Green
+                    self.send_telegram_alert(idx, "STRONG BUY (CALL)", self.prices[idx])
+                elif rand_val < 0.25:
+                    self.signals[idx] = "STRONG SELL (PUT)"
+                    self.colors[idx] = "ff3333" # Bright Red
+                    self.send_telegram_alert(idx, "STRONG SELL (PUT)", self.prices[idx])
                 else:
-                    self.signals[idx] = "⚪ HOLD / MONITOR"
+                    self.signals[idx] = "HOLD / MONITOR"
+                    self.colors[idx] = "ffffff" # White
             
-            time.sleep(10) # 10 seconds interval check
+            time.sleep(10)
 
 class TradingDashboard(BoxLayout):
     def __init__(self, **kwargs):
         super(TradingDashboard, self).__init__(**kwargs)
         self.orientation = 'vertical'
-        self.padding = 20
-        self.spacing = 15
+        self.padding = 30
+        self.spacing = 20
 
         # Header Title
         self.add_widget(Label(
-            text='[b]GN ALGO MATRIX DASHBOARD[/b]', 
+            text='[b][color=00ffff]GN ALGO MATRIX[/color][/b]', 
             markup=True, 
-            font_size=22, 
+            font_size=28, 
             size_hint_y=None, 
-            height=50
+            height=70,
+            halign='center'
         ))
 
         # Engine initialization
         self.engine = TradingEngine()
-        
-        # Start background thread for scanning indices and sending alerts
         self.thread = threading.Thread(target=self.engine.run_simulation, daemon=True)
         self.thread.start()
 
-        # Labels for displaying dynamic status of each index
+        # Large Labels for indices
         self.index_labels = {}
         for idx in self.engine.indices:
             lbl = Label(
-                text=f'[b]{idx}[/b]\nPrice: -- | Signal: Loading...', 
+                text=f'[b]{idx}[/b]\n[size=22]Price: --[/size]\nStatus: Loading...', 
                 markup=True, 
-                font_size=16,
-                halign='center'
+                font_size=20,
+                halign='center',
+                valign='middle'
             )
             self.index_labels[idx] = lbl
             self.add_widget(lbl)
 
-        # Refresh UI via Clock schedule every 1 second
         Clock.schedule_interval(self.update_ui, 1.0)
 
     def update_ui(self, dt):
         for idx in self.engine.indices:
             price = self.engine.prices[idx]
             signal = self.engine.signals[idx]
-            self.index_labels[idx].text = f'[b]{idx}[/b]\nPrice: {price} | Status: {signal}'
+            color = self.engine.colors[idx]
+            
+            self.index_labels[idx].text = (
+                f'[b][color=ffff00]{idx}[/color][/b]\n'
+                f'[size=24]⚡ {price}[/size]\n'
+                f'[b][color={color}]Status: {signal}[/color][/b]'
+            )
 
 class GNAlgoMatrixApp(App):
     def build(self):
@@ -111,4 +116,3 @@ class GNAlgoMatrixApp(App):
 
 if __name__ == '__main__':
     GNAlgoMatrixApp().run()
-    
