@@ -15,6 +15,7 @@ android.ndk = 25b
 android.private_storage = True
 android.permissions = INTERNET
 android.archs = arm64-v8a, armeabi-v7a
+android.accept_sdk_license = True
 
 [buildozer]
 log_level = 2
