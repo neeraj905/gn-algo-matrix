@@ -8,14 +8,30 @@ import time
 import requests
 from datetime import datetime
 
+# Android WakeLock to prevent sleep mode
+try:
+    from jnius import autoclass
+    PythonActivity = autoclass('org.kivy.android.PythonActivity')
+    activity = PythonActivity.mActivity
+    WindowManager = autoclass('android.view.WindowManager$LayoutParams')
+    def keep_screen_on():
+        try:
+            window = activity.getWindow()
+            window.addFlags(WindowManager.FLAG_KEEP_SCREEN_ON)
+        except Exception:
+            pass
+except Exception:
+    def keep_screen_on():
+        pass
+
 class TradingEngine:
     def __init__(self):
         self.indices = ["Nifty 50", "Bank Nifty", "Sensex"]
         self.signals = {index: "HOLD / MONITOR" for index in self.indices}
-        self.prices = {index: 25000.0 for index in self.indices}
+        self.prices = {index: 24500.0 for index in self.indices}
         self.colors = {index: "ffffff" for index in self.indices}
         
-        # Telegram Credentials (Aapke wale fit hain)
+        # Telegram Credentials
         self.token = "8642396544:AAFJVudpn9zWK13a-SweJIkChoKExAk565A"
         self.chat_id = "6606431950"
         self.running = True
@@ -23,12 +39,12 @@ class TradingEngine:
     def send_telegram_alert(self, index_name, signal_type, price):
         if self.token and self.chat_id:
             msg = (
-                f"🚨 *GN ALGO MATRIX ADVANCE ALERT* 🚨\n\n"
+                f"🚨 *GN ALGO MATRIX TRADING SIGNAL* 🚨\n\n"
                 f"📊 *Index:* {index_name}\n"
-                f"⚡ *Signal:* {signal_type}\n"
-                f"💰 *Price:* {price:,.2f}\n"
+                f"⚡ *Action Signal:* {signal_type}\n"
+                f"💰 *Trigger Price:* {price:,.2f}\n"
                 f"⏰ *Time:* {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
-                f"⚠️ _Demat account balance cover karein, sharp market movement detected!_"
+                f"🎯 _Execute trade as per your setup!_"
             )
             try:
                 url = f"https://api.telegram.org/bot{self.token}/sendMessage"
@@ -44,13 +60,13 @@ class TradingEngine:
     def manual_refresh(self):
         import random
         for idx in self.indices:
-            change = random.uniform(-150, 150)
+            change = random.uniform(-120, 120)
             self.prices[idx] += change
-            if change < -80:
-                self.signals[idx] = "⚠️ CRASH WARNING! BUY PUT"
+            if change < -60:
+                self.signals[idx] = "📉 BUY PUT / PUT SELL"
                 self.colors[idx] = "ff3333"
-            elif change > 80:
-                self.signals[idx] = "🚀 SPIKE SURGE! BUY CALL"
+            elif change > 60:
+                self.signals[idx] = "📈 BUY CALL / CALL BUY"
                 self.colors[idx] = "00ff00"
             else:
                 self.signals[idx] = "HOLD / MONITOR"
@@ -62,14 +78,14 @@ class TradingEngine:
         
         while self.running:
             for idx in self.indices:
-                change = random.uniform(-180, 180)
+                change = random.uniform(-150, 150)
                 self.prices[idx] += change
                 
-                if change <= -120:
-                    current_signal = "⚠️ CRASH WARNING! BUY PUT"
+                if change <= -100:
+                    current_signal = "📉 BUY PUT / PUT SELL"
                     self.colors[idx] = "ff3333"
-                elif change >= 120:
-                    current_signal = "🚀 SPIKE SURGE! BUY CALL"
+                elif change >= 100:
+                    current_signal = "📈 BUY CALL / CALL BUY"
                     self.colors[idx] = "00ff00"
                 else:
                     current_signal = "HOLD / MONITOR"
@@ -78,7 +94,7 @@ class TradingEngine:
                 self.signals[idx] = current_signal
 
                 if current_signal != last_sent_signals[idx]:
-                    if "WARNING" in current_signal or "SURGE" in current_signal:
+                    if "BUY" in current_signal or "SELL" in current_signal:
                         self.send_telegram_alert(idx, current_signal, self.prices[idx])
                     last_sent_signals[idx] = current_signal
             
@@ -88,11 +104,13 @@ class TradingDashboard(BoxLayout):
     def __init__(self, **kwargs):
         super(TradingDashboard, self).__init__(**kwargs)
         self.orientation = 'vertical'
-        self.padding = 15
-        self.spacing = 15
+        self.padding = 10
+        self.spacing = 10
 
-        # Top Header Layout with Title & Big Refresh Button
-        header_layout = BoxLayout(orientation='horizontal', size_hint_y=None, height=65)
+        keep_screen_on()
+
+        # Top Header Layout
+        header_layout = BoxLayout(orientation='horizontal', size_hint_y=None, height=60)
         
         header_layout.add_widget(Label(
             text='[b][color=00ffff]GN ALGO MATRIX[/color][/b]', 
@@ -118,13 +136,13 @@ class TradingDashboard(BoxLayout):
         self.thread = threading.Thread(target=self.engine.run_simulation, daemon=True)
         self.thread.start()
 
-        # EKDAM GIANT FONT LABELS (Aapke circle jitne bade aur saaf blocks)
+        # Giant UI Blocks for Indices
         self.index_labels = {}
         for idx in self.engine.indices:
             lbl = Label(
-                text=f'[b]{idx}[/b]\n[size=50]--[/size]\nLoading...', 
+                text=f'[b]{idx}[/b]\n[size=45]--[/size]\nLoading...', 
                 markup=True, 
-                font_size=26,
+                font_size=28,
                 halign='center',
                 valign='middle'
             )
@@ -145,11 +163,11 @@ class TradingDashboard(BoxLayout):
             signal = self.engine.signals[idx]
             color = self.engine.colors[idx]
             
-            # Font size ko aur bada (52 size) kar diya hai taaki door se ekdum saaf dikhe
+            # Giant text layout: Name [32], Price [46], Signal [28]
             self.index_labels[idx].text = (
-                f'[b][color=ffff00]{idx}[/color][/b]\n'
-                f'[size=52][b]⚡ {price:,.2f}[/b][/size]\n'
-                f'[b][color={color}]{signal}[/color][/b]'
+                f'[b][color=ffff00][size=32]{idx}[/size][/color][/b]\n'
+                f'[b][color=ffffff][size=46]{price:,.2f}[/size][/color][/b]\n'
+                f'[b][color={color}][size=28]{signal}[/size][/color][/b]'
             )
 
 class GNAlgoMatrixApp(App):
@@ -158,4 +176,4 @@ class GNAlgoMatrixApp(App):
 
 if __name__ == '__main__':
     GNAlgoMatrixApp().run()
-                
+    
