@@ -2,7 +2,6 @@ from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
 from kivy.uix.button import Button
-from kivy.uix.scrollview import ScrollView
 from kivy.clock import Clock
 import threading
 import time
@@ -85,65 +84,60 @@ class TradingEngine:
             
             time.sleep(10)
 
-class TradingDashboard(ScrollView):
+class TradingDashboard(BoxLayout):
     def __init__(self, **kwargs):
         super(TradingDashboard, self).__init__(**kwargs)
-        self.do_scroll_x = False
-        self.do_scroll_y = True
+        self.orientation = 'vertical'
+        self.padding = 15
+        self.spacing = 15
 
-        # Main layout inside scroll view for pull-to-refresh effect
-        layout = BoxLayout(orientation='vertical', padding=20, spacing=15, size_hint_y=None)
-        layout.bind(minimum_height=layout.setter('height'))
-
-        # Header Title - Giant & Clear
-        layout.add_widget(Label(
-            text='[b][color=00ffff]GN ALGO MATRIX DASHBOARD[/color][/b]', 
+        # Top Header Layout with Title & Big Refresh Button
+        header_layout = BoxLayout(orientation='horizontal', size_hint_y=None, height=65)
+        
+        header_layout.add_widget(Label(
+            text='[b][color=00ffff]GN ALGO MATRIX[/color][/b]', 
             markup=True, 
-            font_size=28, 
-            size_hint_y=None, 
-            height=60,
-            halign='center'
+            font_size=24,
+            halign='left'
         ))
+
+        self.refresh_btn = Button(
+            text='[b]🔄 REFRESH[/b]',
+            markup=True,
+            font_size=18,
+            size_hint_x=None,
+            width=130,
+            background_color=(0, 0.8, 0.8, 1)
+        )
+        self.refresh_btn.bind(on_press=self.trigger_refresh)
+        header_layout.add_widget(self.refresh_btn)
+        
+        self.add_widget(header_layout)
 
         self.engine = TradingEngine()
         self.thread = threading.Thread(target=self.engine.run_simulation, daemon=True)
         self.thread.start()
 
-        # GIANT FONT LABELS FOR INDICES
+        # EKDAM GIANT FONT LABELS (Aapke circle jitne bade aur saaf blocks)
         self.index_labels = {}
         for idx in self.engine.indices:
             lbl = Label(
-                text=f'[b]{idx}[/b]\n[size=34]Price: --[/size]\nStatus: Loading...', 
+                text=f'[b]{idx}[/b]\n[size=50]--[/size]\nLoading...', 
                 markup=True, 
-                font_size=24,
+                font_size=26,
                 halign='center',
-                valign='middle',
-                size_hint_y=None,
-                height=130
+                valign='middle'
             )
             self.index_labels[idx] = lbl
-            layout.add_widget(lbl)
+            self.add_widget(lbl)
 
-        # MODERN REFRESH BUTTON (Swipe / Pull style action)
-        self.refresh_btn = Button(
-            text='[b]🔄 REFRESH (PULL / TAP TO UPDATE)[/b]',
-            markup=True,
-            font_size=20,
-            size_hint_y=None,
-            height=70,
-            background_color=(0, 0.7, 0.7, 1)
-        )
-        self.refresh_btn.bind(on_press=self.trigger_refresh)
-        layout.add_widget(self.refresh_btn)
-
-        self.add_widget(layout)
         Clock.schedule_interval(self.update_ui, 1.0)
 
     def trigger_refresh(self, instance):
-        self.refresh_btn.text = '[b]⏳ REFRESHING...[/b]'
+        self.refresh_btn.text = '[b]⏳ 🔄[/b]'
         self.engine.manual_refresh()
         self.update_ui(0)
-        Clock.schedule_once(lambda dt: setattr(self.refresh_btn, 'text', '[b]🔄 REFRESH (PULL / TAP TO UPDATE)[/b]'), 0.5)
+        Clock.schedule_once(lambda dt: setattr(self.refresh_btn, 'text', '[b]🔄 REFRESH[/b]'), 0.5)
 
     def update_ui(self, dt):
         for idx in self.engine.indices:
@@ -151,10 +145,11 @@ class TradingDashboard(ScrollView):
             signal = self.engine.signals[idx]
             color = self.engine.colors[idx]
             
+            # Font size ko aur bada (52 size) kar diya hai taaki door se ekdum saaf dikhe
             self.index_labels[idx].text = (
                 f'[b][color=ffff00]{idx}[/color][/b]\n'
-                f'[size=36]⚡ {price:,.2f}[/size]\n'
-                f'[b][color={color}]Status: {signal}[/color][/b]'
+                f'[size=52][b]⚡ {price:,.2f}[/b][/size]\n'
+                f'[b][color={color}]{signal}[/color][/b]'
             )
 
 class GNAlgoMatrixApp(App):
@@ -163,4 +158,4 @@ class GNAlgoMatrixApp(App):
 
 if __name__ == '__main__':
     GNAlgoMatrixApp().run()
-        
+                
