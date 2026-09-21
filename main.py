@@ -11,10 +11,10 @@ class TradingEngine:
     def __init__(self):
         self.indices = ["Nifty 50", "Bank Nifty", "Sensex"]
         self.signals = {index: "HOLD / MONITOR" for index in self.indices}
-        self.prices = {index: "0.00" for index in self.indices}
+        self.prices = {index: 0.0 for index in self.indices}
         self.colors = {index: "ffffff" for index in self.indices}
         
-        # Aapke credentials yahan seedha fit kar diye gaye hain
+        # Aapke Telegram credentials yahan fit hain
         self.token = "8642396544:AAFJVudpn9zWK13a-SweJIkChoKExAk565A"
         self.chat_id = "6606431950"
         self.running = True
@@ -22,11 +22,12 @@ class TradingEngine:
     def send_telegram_alert(self, index_name, signal_type, price):
         if self.token and self.chat_id:
             msg = (
-                f"🚨 *GN ALGO MATRIX ALERT* 🚨\n\n"
+                f"🚨 *GN ALGO MATRIX ADVANCE ALERT* 🚨\n\n"
                 f"📊 *Index:* {index_name}\n"
                 f"⚡ *Signal:* {signal_type}\n"
-                f"💰 *Price:* {price}\n"
-                f"⏰ *Time:* {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+                f"💰 *Price:* {price:,.2f}\n"
+                f"⏰ *Time:* {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+                f"⚠️ _Demat account balance cover karein, sharp market movement detected!_"
             )
             try:
                 url = f"https://api.telegram.org/bot{self.token}/sendMessage"
@@ -41,55 +42,72 @@ class TradingEngine:
 
     def run_simulation(self):
         import random
+        last_sent_signals = {idx: "" for idx in self.indices}
+        previous_prices = {idx: 25000.0 for idx in self.indices}
+        
         while self.running:
-            for idx in self.indices:
-                dummy_price = round(random.uniform(20000, 50000), 2)
-                self.prices[idx] = f"{dummy_price:,.2f}"
-                
-                rand_val = random.random()
-                if rand_val > 0.75:
-                    self.signals[idx] = "STRONG BUY (CALL)"
-                    self.colors[idx] = "00ff00" # Bright Green
-                    self.send_telegram_alert(idx, "STRONG BUY (CALL)", self.prices[idx])
-                elif rand_val < 0.25:
-                    self.signals[idx] = "STRONG SELL (PUT)"
-                    self.colors[idx] = "ff3333" # Bright Red
-                    self.send_telegram_alert(idx, "STRONG SELL (PUT)", self.prices[idx])
-                else:
-                    self.signals[idx] = "HOLD / MONITOR"
-                    self.colors[idx] = "ffffff" # White
-            
+            # Market Timing Check (Subah 9:15 se Shaam 3:30 tak active)
+            now = datetime.now()
+            current_time_val = now.hour * 100 + now.minute
+            is_market_open = 915 <= current_time_val <= 1530
+
+            if is_market_open:
+                for idx in self.indices:
+                    change = random.uniform(-180, 180)
+                    current_price = previous_prices[idx] + change
+                    self.prices[idx] = current_price
+                    
+                    if change <= -120:
+                        current_signal = "⚠️ CRASH WARNING! BUY PUT"
+                        self.colors[idx] = "ff3333"
+                    elif change >= 120:
+                        current_signal = "🚀 SPIKE SURGE! BUY CALL"
+                        self.colors[idx] = "00ff00"
+                    else:
+                        current_signal = "HOLD / MONITOR"
+                        self.colors[idx] = "ffffff"
+
+                    self.signals[idx] = current_signal
+                    previous_prices[idx] = current_price
+
+                    if current_signal != last_sent_signals[idx]:
+                        if "WARNING" in current_signal or "SURGE" in current_signal:
+                            self.send_telegram_alert(idx, current_signal, current_price)
+                        last_sent_signals[idx] = current_signal
+            else:
+                for idx in self.indices:
+                    self.signals[idx] = "MARKET CLOSED (OFFLINE)"
+                    self.colors[idx] = "888888"
+
             time.sleep(10)
 
 class TradingDashboard(BoxLayout):
     def __init__(self, **kwargs):
         super(TradingDashboard, self).__init__(**kwargs)
         self.orientation = 'vertical'
-        self.padding = 30
-        self.spacing = 20
+        self.padding = 20
+        self.spacing = 15
 
-        # Header Title
+        # Header Title - Bada aur Saaf
         self.add_widget(Label(
-            text='[b][color=00ffff]GN ALGO MATRIX[/color][/b]', 
+            text='[b][color=00ffff]GN ALGO MATRIX DASHBOARD[/color][/b]', 
             markup=True, 
-            font_size=28, 
+            font_size=26, 
             size_hint_y=None, 
-            height=70,
+            height=60,
             halign='center'
         ))
 
-        # Engine initialization
         self.engine = TradingEngine()
         self.thread = threading.Thread(target=self.engine.run_simulation, daemon=True)
         self.thread.start()
 
-        # Large Labels for indices
         self.index_labels = {}
         for idx in self.engine.indices:
             lbl = Label(
-                text=f'[b]{idx}[/b]\n[size=22]Price: --[/size]\nStatus: Loading...', 
+                text=f'[b]{idx}[/b]\n[size=24]Price: --[/size]\nStatus: Loading...', 
                 markup=True, 
-                font_size=20,
+                font_size=22,
                 halign='center',
                 valign='middle'
             )
@@ -106,7 +124,7 @@ class TradingDashboard(BoxLayout):
             
             self.index_labels[idx].text = (
                 f'[b][color=ffff00]{idx}[/color][/b]\n'
-                f'[size=24]⚡ {price}[/size]\n'
+                f'[size=26]⚡ {price:,.2f}[/size]\n'
                 f'[b][color={color}]Status: {signal}[/color][/b]'
             )
 
@@ -116,3 +134,4 @@ class GNAlgoMatrixApp(App):
 
 if __name__ == '__main__':
     GNAlgoMatrixApp().run()
+        
