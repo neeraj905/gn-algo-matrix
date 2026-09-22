@@ -13,7 +13,7 @@ android.minapi = 21
 android.sdk = 33
 android.ndk = 25b
 android.private_storage = True
-android.permissions = INTERNET
+android.permissions = INTERNET, WAKE_LOCK, FOREGROUND_SERVICE
 android.archs = arm64-v8a
 android.accept_sdk_license = True
 
