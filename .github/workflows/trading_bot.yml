@@ -1,9 +1,9 @@
-name: GN Algo Cloud Trading Bot
+name: GN Algo Matrix Trading Bot
 
 on:
   schedule:
-    - cron: '*/5 * * * *'  # Har 5 minute mein automatically run hoga
-  workflow_dispatch:      # Aap manually bhi button daba kar chala sakte hain
+    - cron: '*/5 * * * *'  # Har 5 minute mein chalega
+  workflow_dispatch:      # Manual run button ke liye
 
 jobs:
   run-bot:
@@ -19,9 +19,9 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          pip install requests
+          pip install requests pytz
 
-      - name: Run Trading Script
+      - name: Run Trading Service
         run: |
           python service.py
           
