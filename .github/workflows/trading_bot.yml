@@ -1,0 +1,27 @@
+name: GN Algo Cloud Trading Bot
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'  # Har 5 minute mein automatically run hoga
+  workflow_dispatch:      # Aap manually bhi button daba kar chala sakte hain
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Dependencies
+        run: |
+          pip install requests
+
+      - name: Run Trading Script
+        run: |
+          python service.py
+          
