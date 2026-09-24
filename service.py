@@ -74,7 +74,7 @@ if __name__ == '__main__':
         
         market_data = get_live_market_data()
         
-        msg = "🚨 *GN ALGO MATRIX - TEST SIGNAL* 🚨\n"
+        msg = "🚨 *GN ALGO MATRIX - TRADING SIGNAL* 🚨\n"
         msg += f"⏰ *Time (IST):* `{current_time_str}`\n\n"
         
         if market_data:
@@ -84,13 +84,22 @@ if __name__ == '__main__':
                 change = price - prev_close
                 change_pct = (change / prev_close) * 100
                 
+                # Signal Generation Logic based on price change
+                if change_pct > 0.15:
+                    signal = "🟢 *BUY / CE (BULLISH)*"
+                elif change_pct < -0.15:
+                    signal = "🔴 *SELL / PE (BEARISH)*"
+                else:
+                    signal = "⚪ *HOLD / SIDEWAYS*"
+                
                 msg += f"📊 *Index:* {symbol}\n"
                 msg += f"💰 *Live Price:* `{price:,.2f}`\n"
-                msg += f"📊 *Change:* `{change:+.2f} ({change_pct:+.2f}%)`\n"
+                msg += f"📈 *Change:* `{change:+.2f} ({change_pct:+.2f}%)`\n"
+                msg += f"🎯 *Signal:* {signal}\n"
                 msg += "-----------------------------------\n"
             
             send_message(msg)
         else:
             print("Failed to fetch market data.")
             send_message("⚠️ Test message: Bot is running, but market data failed to fetch.")
-        
+            
