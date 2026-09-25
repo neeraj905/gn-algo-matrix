@@ -77,7 +77,7 @@ if __name__ == '__main__':
         msg = "🚨 *GN ALGO MATRIX - TRADING SIGNAL* 🚨\n"
         msg += f"⏰ *Time (IST):* `{current_time_str}`\n\n"
         
-            if market_data:
+        if market_data:
                 if market_data:
         for symbol, data in market_data.items():
             price = data['price']
