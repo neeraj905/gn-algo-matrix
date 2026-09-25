@@ -78,6 +78,7 @@ if __name__ == '__main__':
         msg += f"⏰ *Time (IST):* `{current_time_str}`\n\n"
         
             if market_data:
+                if market_data:
         for symbol, data in market_data.items():
             price = data['price']
             prev_close = data['prev_close']
@@ -103,18 +104,8 @@ if __name__ == '__main__':
             msg += f"-------------------\n"
         
         send_message(msg)
-
-
-               msg += f"📊 *Index:* {symbol}\n"
-               msg += f"💰 *Live Price:* `{price}`\n"
-               msg += f"📈 *Change:* `{change:+.2f} ({change_pct:+.2f}%)`\n"
-               msg += f"🎯 *Signal:* {signal}\n"
-               msg += f"{action}\n"
-               msg += f"-------------------\n"
-
+    else:
+        print("Failed to fetch market data.")
+        send_message("⚠️ Test message: Bot is running but market data fetch failed.")
             
-                        send_message(msg)
-                   else:
-                        print("Failed to fetch market data.")
-                        send_message("⚠️ Test message: Bot is running, but market data failed to fetch.")
-            
+             
