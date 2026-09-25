@@ -87,16 +87,21 @@ if __name__ == '__main__':
                 # Signal Generation Logic based on price change
                 if change_pct > 0.15:
                     signal = "🟢 *BUY / CE (BULLISH)*"
+                    action = "💡 *Action:* Fresh Call trade le sakte hain."
                 elif change_pct < -0.15:
                     signal = "🔴 *SELL / PE (BEARISH)*"
+                    action = "💡 *Action:* Fresh Put trade le sakte hain."
                 else:
                     signal = "⚪ *HOLD / SIDEWAYS*"
-                
+                    action = "⚠️ *Action:* No Trade Zone! Koi fresh trade na lein."
+
                 msg += f"📊 *Index:* {symbol}\n"
                 msg += f"💰 *Live Price:* `{price:,.2f}`\n"
                 msg += f"📈 *Change:* `{change:+.2f} ({change_pct:+.2f}%)`\n"
                 msg += f"🎯 *Signal:* {signal}\n"
+                msg += f"{action}\n"
                 msg += "-----------------------------------\n"
+    
             
             send_message(msg)
         else:
