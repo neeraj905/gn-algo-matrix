@@ -84,27 +84,27 @@ if __name__ == '__main__':
                 change = price - prev_close
                 change_pct = (change / prev_close) * 100
                 
-     # Signal Generation & Exit Logic
-    if change_pct > 0.15:
-        signal = "🟢 *BUY / CE (BULLISH)*"
-        action = "💡 *Action:* Fresh Call trade le sakte hain."
-    elif change_pct < -0.15:
-        signal = "🔴 *SELL / PE (BEARISH)*"
-        action = "💡 *Action:* Fresh Put trade le sakte hain."
-    else:
-        signal = "⚪ *EXIT / SQUARE OFF (URGENT)*"
-        action = "⚠️ *Action:* Market sideways/reverse ho raha hai, apna purana maal turant SELL / exit kar dein!"
+               # Signal Generation & Exit Logic
+               if change_pct > 0.15:
+                   signal = "🟢 *BUY / CE (BULLISH)*"
+                   action = "💡 *Action:* Fresh Call trade le sakte hain."
+               elif change_pct < -0.15:
+                   signal = "🔴 *SELL / PE (BEARISH)*"
+                   action = "💡 *Action:* Fresh Put trade le sakte hain."
+              else:
+                   signal = "⚪ *EXIT / SQUARE OFF (URGENT)*"
+                   action = "⚠️ *Action:* Market sideways/reverse ho raha hai, apna purana maal turant SELL / exit kar dein!"
 
-                msg += f"📊 *Index:* {symbol}\n"
-                msg += f"💰 *Live Price:* `{price:,.2f}`\n"
-                msg += f"📈 *Change:* `{change:+.2f} ({change_pct:+.2f}%)`\n"
-                msg += f"🎯 *Signal:* {signal}\n"
-                msg += f"{action}\n"
-                msg += "-----------------------------------\n"
-    
+               msg += f"📊 *Index:* {symbol}\n"
+               msg += f"💰 *Live Price:* `{price}`\n"
+               msg += f"📈 *Change:* `{change:+.2f} ({change_pct:+.2f}%)`\n"
+               msg += f"🎯 *Signal:* {signal}\n"
+               msg += f"{action}\n"
+               msg += f"-------------------\n"
+
             
-            send_message(msg)
-        else:
-            print("Failed to fetch market data.")
-            send_message("⚠️ Test message: Bot is running, but market data failed to fetch.")
+                        send_message(msg)
+                   else:
+                        print("Failed to fetch market data.")
+                        send_message("⚠️ Test message: Bot is running, but market data failed to fetch.")
             
