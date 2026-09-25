@@ -1,127 +1,106 @@
-import time
+import os
 import requests
-import json
-from datetime import datetime, time as dtime
-import pytz
 
 # ==========================================
-# 1. CONFIGURATION & CREDENTIALS
+# 1. CREDENTIALS SETUP (GitHub Secrets se uthayega)
 # ==========================================
-TOKEN = "8642396544:AAFJVudpn9zWK13a-SweJIkChoKExAk565A"
-CHAT_ID = "6606431950"
-
-
-# ==========================================
-# 2. TELEGRAM MESSAGING SERVICE
-# ==========================================
-def send_message(text):
-    try:
-        url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
-        payload = {"chat_id": CHAT_ID, "text": text, "parse_mode": "Markdown"}
-        response = requests.post(url, json=payload, timeout=10)
-        print("Telegram Response:", response.text)
-    except Exception as e:
-        print(f"Telegram error: {e}")
-
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+CHAT_ID = os.getenv("CHAT_ID")
 
 # ==========================================
-# 3. BOT STATUS CHECK SERVICE
-# ==========================================
-def check_bot_status():
-    """GitHub repository se config.json check karega ki bot ON hai ya OFF"""
-    try:
-        url = "https://raw.githubusercontent.com/neeraj905/gn-algo-matrix/main/config.json"
-        response = requests.get(url, timeout=5)
-        if response.status_code == 200:
-            config = response.json()
-            return config.get("bot_status", "OFF").upper()
-    except Exception as e:
-        print(f"Status check error: {e}")
-    return "ON"
-
-
-# ==========================================
-# 4. LIVE MARKET DATA FETCH SERVICE
+# 2. LIVE MARKET DATA FETCH SERVICE
 # ==========================================
 def get_live_market_data():
-    """Yahoo Finance se Nifty aur Sensex ka real live price layega"""
+    """
+    Yahoo Finance se Nifty 50, Nifty Next 50, aur Sensex 
+    ka exact spot index data fetch karta hai.
+    """
     prices = {}
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
     }
     
-    try:
-        # Nifty 50
-        nifty_url = "https://query1.finance.yahoo.com/v8/finance/chart/%5ENSEI?interval=1m"
-        res = requests.get(nifty_url, headers=headers, timeout=8)
-        if res.status_code == 200:
-            data = res.json()
-            result = data['chart']['result'][0]
-            price = result['meta']['regularMarketPrice']
-            previous_close = result['meta']['chartPreviousClose']
-            prices['Nifty 50'] = {'price': price, 'prev_close': previous_close}
-    except Exception as e:
-        print(f"Nifty fetch error: {e}")
-
-    try:
-        # Sensex
-        sensex_url = "https://query1.finance.yahoo.com/v8/finance/chart/%5EBSESN?interval=1m"
-        res = requests.get(sensex_url, headers=headers, timeout=8)
-        if res.status_code == 200:
-            data = res.json()
-            result = data['chart']['result'][0]
-            price = result['meta']['regularMarketPrice']
-            previous_close = result['meta']['chartPreviousClose']
-            prices['Sensex'] = {'price': price, 'prev_close': previous_close}
-    except Exception as e:
-        print(f"Sensex fetch error: {e}")
+    # Official Spot Index Tickers for Yahoo Finance
+    indices = {
+        'Nifty 50': '%5ENSEI',          # Nifty 50 Spot (^NSEI)
+        'Nifty Next 50': '%5ENSEMDCP0', # Nifty Next 50 Spot (^NSEMDCP0)
+        'Sensex': '%5EBSESN'            # Sensex Spot (^BSESN)
+    }
+    
+    for name, ticker in indices.items():
+        try:
+            url = f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}?interval=1m"
+            res = requests.get(url, headers=headers, timeout=10)
+            
+            if res.status_code == 200:
+                data = res.json()
+                result = data['chart']['result'][0]
+                meta = result['meta']
+                
+                price = meta.get('regularMarketPrice')
+                prev_close = meta.get('chartPreviousClose') or meta.get('previousClose')
+                
+                if price and prev_close:
+                    change = price - prev_close
+                    change_pct = (change / prev_close) * 100
+                    prices[name] = {
+                        'price': price,
+                        'prev_close': prev_close,
+                        'change': change,
+                        'change_pct': change_pct
+                    }
+        except Exception as e:
+            print(f"Error fetching {name}: {e}")
 
     return prices
 
+# ==========================================
+# 3. SIGNAL & STRATEGY LOGIC (CALL / PUT / SIDEWAYS)
+# ==========================================
+def evaluate_signal(change_pct):
+    """
+    Percentage change ke base par decide karta hai ki 
+    Call (CE), Put (PE) ya Sideways signal bnega.
+    """
+    # Agar fluctuation -0.15% se +0.15% ke beech hai toh Sideways maana jayega
+    if -0.15 <= change_pct <= 0.15:
+        return {
+            "signal": "🟡 SIDEWAYS / RANGE-BOUND",
+            "action": "Market range-bound hai, filhal koi fresh trade avoid karein."
+        }
+    elif change_pct > 0.15:
+        return {
+            "signal": "🟢 BUY / CE (BULLISH)",
+            "action": "Fresh Call (CE) trade le sakte hain."
+        }
+    else:
+        return {
+            "signal": "🔴 SELL / PE (BEARISH)",
+            "action": "Fresh Put (PE) trade le sakte hain."
+        }
 
 # ==========================================
-# 5. MAIN EXECUTION & SIGNAL GENERATION BLOCK
+# 4. TELEGRAM ALERT SENDER
 # ==========================================
-if __name__ == '__main__':
-    status = check_bot_status()
-    print(f"Current Bot Status: {status}")
-
-    if status == "ON":
-        ist = pytz.timezone('Asia/Kolkata')
-        current_time_str = datetime.now(ist).strftime('%Y-%m-%d %H:%M:%S')
+def send_telegram_alert(message):
+    """
+    Telegram bot ke zariye formatted message bhejta hai.
+    """
+    if not TELEGRAM_TOKEN or not CHAT_ID:
+        print("Error: Telegram TOKEN ya CHAT_ID missing hai!")
+        return None
         
-        market_data = get_live_market_data()
-        
-        msg = "🚨 *GN ALGO MATRIX - TRADING SIGNAL* 🚨\n"
-        msg += f"⏰ *Time (IST):* `{current_time_str}`\n\n"
-        
-        if market_data:
-            for symbol, data in market_data.items():
-                price = data['price']
-                prev_close = data['prev_close']
-                change = price - prev_close
-                change_pct = (change / prev_close) * 100
-                
-                # Signal Generation & Exit Logic (Buy / Sell / Urgent Exit)
-                if change_pct > 0.15:
-                    signal = "🟢 *BUY / CE (BULLISH)*"
-                    action = "💡 *Action:* Fresh Call trade le sakte hain."
-                elif change_pct < -0.15:
-                    signal = "🔴 *SELL / PE (BEARISH)*"
-                    action = "💡 *Action:* Fresh Put trade le sakte hain."
-                else:
-                    signal = "⚪ *EXIT / SQUARE OFF (URGENT)*"
-                    action = "⚠️ *Action:* Market sideways/reverse ho raha hai, apna purana maal turant SELL / exit kar dein!"
-                
-                msg += f"📊 *Index:* {symbol}\n"
-                msg += f"💰 *Live Price:* `{price:.2f}`\n"
-                msg += f"📈 *Change:* `{change:+.2f} ({change_pct:+.2f}%)`\n"
-                msg += f"🎯 *Signal:* {signal}\n"
-                msg += f"{action}\n"
-                msg += f"-------------------\n"
-            
-            send_message(msg)
-        else:
-            print("Failed to fetch market data.")
-            send_message("⚠️ Test message: Bot is running but market data fetch failed.")
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+    payload = {
+        "chat_id": CHAT_ID,
+        "text": message,
+        "parse_mode": "Markdown"
+    }
     
+    try:
+        response = requests.post(url, json=payload, timeout=10)
+        return response.json()
+    except Exception as e:
+        print(f"Telegram alert error: {e}")
+        return None
+        
