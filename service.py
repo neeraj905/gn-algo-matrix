@@ -84,23 +84,26 @@ def evaluate_signal(change_pct):
 # ==========================================
 def send_telegram_alert(message):
     """
-    Telegram bot ke zariye formatted message bhejta hai.
+    Telegram bot ke zariye bina kisi emoji/encoding error ke clean message bhejta hai.
     """
     if not TELEGRAM_TOKEN or not CHAT_ID:
         print("Error: Telegram TOKEN ya CHAT_ID missing hai!")
         return None
         
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+    
+    # Emojis aur special unicode symbols ki vajah sa error na aaye, isliye plain text rakha hai
     payload = {
         "chat_id": CHAT_ID,
-        "text": message,
-        "parse_mode": "Markdown"
+        "text": message
     }
     
     try:
         response = requests.post(url, json=payload, timeout=10)
+        print(f"Telegram Response: {response.text}")
         return response.json()
     except Exception as e:
         print(f"Telegram alert error: {e}")
         return None
+        
         
