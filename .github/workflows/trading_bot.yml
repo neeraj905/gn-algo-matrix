@@ -1,4 +1,4 @@
-name: GN Algo Matrix Trading Bot
+Name: GN Algo Matrix Trading Bot
 
 on:
   schedule:
@@ -24,4 +24,7 @@ jobs:
       - name: Run Trading Service
         run: |
           python service.py
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
           
