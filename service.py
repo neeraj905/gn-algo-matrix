@@ -1,4 +1,5 @@
 import os
+import time
 import requests
 
 # ==========================================
@@ -12,24 +13,30 @@ CHAT_ID = os.getenv("CHAT_ID")
 # ==========================================
 def get_live_market_data():
     """
-    Yahoo Finance se Nifty 50, Nifty Next 50, aur Sensex 
-    ka exact spot index data fetch karta hai.
+    Yahoo Finance se Nifty 50, Bank Nifty, Nifty Next 50, aur Sensex 
+    ka exact spot index data cache-busting ke sath fetch karta hai.
     """
     prices = {}
     headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
     }
     
-    # Official Spot Index Tickers for Yahoo Finance
+    # Official Spot Index Tickers for Yahoo Finance (Sensex, Nifty 50 & Bank Nifty)
     indices = {
         'Nifty 50': '%5ENSEI',          # Nifty 50 Spot (^NSEI)
+        'Bank Nifty': '%5ENSEBANK',     # Bank Nifty Spot (^NSEBANK)
         'Nifty Next 50': '%5ENSEMDCP0', # Nifty Next 50 Spot (^NSEMDCP0)
         'Sensex': '%5EBSESN'            # Sensex Spot (^BSESN)
     }
     
+    # Cache-busting timestamp taaki purana price atke nahi
+    timestamp_param = int(time.time())
+
     for name, ticker in indices.items():
         try:
-            url = f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}?interval=1m"
+            url = f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}?interval=1m&_={timestamp_param}"
             res = requests.get(url, headers=headers, timeout=10)
             
             if res.status_code == 200:
@@ -59,16 +66,15 @@ def get_live_market_data():
 # ==========================================
 def evaluate_signal(change_pct):
     """
-    Percentage change ke base par decide karta hai ki 
-    Call (CE), Put (PE) ya Sideways signal bnega.
+    Percentage change ke base par accurate Bullish, Bearish ya Sideways signal banata hai.
     """
-    # Agar fluctuation -0.15% se +0.15% ke beech hai toh Sideways maana jayega
-    if -0.15 <= change_pct <= 0.15:
+    # Sideways range (theta decay aur khatarnak market se bachne ke liye)
+    if -0.05 <= change_pct <= 0.05:
         return {
-            "signal": "🟡 SIDEWAYS / RANGE-BOUND",
-            "action": "Market range-bound hai, filhal koi fresh trade avoid karein."
+            "signal": "🟡 SIDEWAYS / RANGE-BOUND (Khatarnak Market)",
+            "action": "Market range-bound hai, theta decay se bachein aur fresh trade bilkul avoid karein."
         }
-    elif change_pct > 0.15:
+    elif change_pct > 0.05:
         return {
             "signal": "🟢 BUY / CE (BULLISH)",
             "action": "Fresh Call (CE) trade le sakte hain."
@@ -84,7 +90,7 @@ def evaluate_signal(change_pct):
 # ==========================================
 def send_telegram_alert(message):
     """
-    Telegram bot ke zariye bina kisi emoji/encoding error ke clean message bhejta hai.
+    Telegram bot ke zariye clean message bhejta hai.
     """
     if not TELEGRAM_TOKEN or not CHAT_ID:
         print("Error: Telegram TOKEN ya CHAT_ID missing hai!")
@@ -92,7 +98,6 @@ def send_telegram_alert(message):
         
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     
-    # Emojis aur special unicode symbols ki vajah sa error na aaye, isliye plain text rakha hai
     payload = {
         "chat_id": CHAT_ID,
         "text": message
@@ -105,8 +110,8 @@ def send_telegram_alert(message):
     except Exception as e:
         print(f"Telegram alert error: {e}")
         return None
-        
-        # ==========================================
+
+# ==========================================
 # 5. MAIN EXECUTION BLOCK
 # ==========================================
 if __name__ == "__main__":
@@ -132,4 +137,3 @@ if __name__ == "__main__":
         print(f"{index_name} ke liye telegram alert bheja ja raha hai...")
         send_telegram_alert(message)
     
-        
