@@ -1,9 +1,9 @@
-Name: GN Algo Matrix Trading Bot
+name: GN Algo Matrix Trading Bot
 
 on:
   schedule:
-    - cron: '*/5 * * * *'  # Har 5 minute mein chalega
-  workflow_dispatch:      # Manual run button ke liye
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
 
 jobs:
   run-bot:
