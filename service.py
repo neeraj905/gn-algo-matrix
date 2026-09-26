@@ -106,4 +106,30 @@ def send_telegram_alert(message):
         print(f"Telegram alert error: {e}")
         return None
         
+        # ==========================================
+# 5. MAIN EXECUTION BLOCK
+# ==========================================
+if __name__ == "__main__":
+    print("Market data fetching shuru ho rahi hai...")
+    market_data = get_live_market_data()
+    print(f"Fetched Data: {market_data}")
+    
+    if not market_data:
+        print("Koi data nahi mila!")
+    
+    for index_name, info in market_data.items():
+        signal_data = evaluate_signal(info['change_pct'])
+        
+        # Message format tayyar karna
+        message = (
+            f"Index: {index_name}\n"
+            f"Price: {info['price']} \n"
+            f"Change: {info['change_pct']:.2f}%\n"
+            f"Signal: {signal_data['signal']}\n"
+            f"Action: {signal_data['action']}"
+        )
+        
+        print(f"{index_name} ke liye telegram alert bheja ja raha hai...")
+        send_telegram_alert(message)
+    
         
