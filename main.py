@@ -1,13 +1,11 @@
 import streamlit as st
 
-# --- PAGE CONFIGURATION ---
 st.set_page_config(
     page_title="Algo Trading Portal",
     page_icon="⚡",
     layout="centered"
 )
 
-# --- CUSTOM CSS FOR BRANDING & STYLING ---
 st.markdown("""
     <style>
     .main-header {
@@ -34,11 +32,9 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- APP UI HEADER ---
 st.markdown('<p class="main-header">ALGO TRADING PORTAL</p>', unsafe_allow_html=True)
 st.markdown('<p class="sub-header">Professional Automated Trading Terminal</p>', unsafe_allow_html=True)
 
-# --- SIDEBAR: TRADING MODE SELECTOR ---
 st.sidebar.header("Control Panel")
 trading_mode = st.sidebar.radio(
     "Select Trading Mode:",
@@ -49,7 +45,6 @@ trading_mode = st.sidebar.radio(
 st.sidebar.markdown("---")
 st.sidebar.info(f"Current Mode Active:\n{trading_mode}")
 
-# --- MAIN DASHBOARD AREA ---
 col1, col2 = st.columns(2)
 
 with col1:
@@ -63,7 +58,6 @@ with col2:
 
 st.markdown("---")
 
-# --- BROKER / TRADING CONTROLS ---
 if "Paper" in trading_mode:
     st.success("Paper Trading Mode Active: Orders will be simulated safely without real capital risk.")
     
@@ -78,7 +72,6 @@ if "Paper" in trading_mode:
 else:
     st.warning("Real Trading Mode Active: Connected to live broker gateway. Capital risk is involved.")
     
-    # Broker Login Card inside Real Mode
     broker_id = st.text_input("Broker User ID / Client Code", placeholder="e.g., 10EFJ")
     api_key = st.text_input("Consumer Key / API Key", type="password", placeholder="Enter your broker API key")
     
@@ -93,6 +86,6 @@ else:
         if st.button("Emergency Square Off"):
             st.error("EMERGENCY SQUARE-OFF TRIGGERED!")
 
-# Footer
 st.markdown("---")
 st.markdown("<p style='text-align: center; color: gray; font-size: 12px;'>Powered by Cloud Web Engine • Secure & Real-time</p>", unsafe_allow_html=True)
+              
