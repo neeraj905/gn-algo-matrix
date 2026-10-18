@@ -35,19 +35,19 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- APP UI HEADER ---
-st.markdown('<p class="main-header">⚡ ALGO TRADING ⚡</p>', unsafe_allow_html=True)
+st.markdown('<p class="main-header">ALGO TRADING PORTAL</p>', unsafe_allow_html=True)
 st.markdown('<p class="sub-header">Professional Automated Trading Terminal</p>', unsafe_allow_html=True)
 
 # --- SIDEBAR: TRADING MODE SELECTOR ---
-st.sidebar.header("⚙️ Control Panel")
+st.sidebar.header("Control Panel")
 trading_mode = st.sidebar.radio(
     "Select Trading Mode:",
-    ["🟢 Paper Trading (Simulation)", "🔴 Real Trading (Live Kotak Neo)"],
+    ["Paper Trading (Simulation)", "Real Trading (Live Kotak Neo)"],
     index=0
 )
 
 st.sidebar.markdown("---")
-st.sidebar.info(f"Current Mode Active:\n**{trading_mode}**")
+st.sidebar.info(f"Current Mode Active:\n{trading_mode}")
 
 # --- MAIN DASHBOARD AREA ---
 col1, col2 = st.columns(2)
@@ -57,26 +57,26 @@ with col1:
 
 with col2:
     if "Paper" in trading_mode:
-        st.metric(label="Paper Portfolio P&L", value="₹12,450.00", delta="+₹1,250")
+        st.metric(label="Paper Portfolio P&L", value="12,450.00", delta="1,250")
     else:
-        st.metric(label="Live Account P&L", value="₹0.00", delta="0.00 (Locked)")
+        st.metric(label="Live Account P&L", value="0.00", delta="0.00")
 
 st.markdown("---")
 
 # --- BROKER / TRADING CONTROLS ---
 if "Paper" in trading_mode:
-    st.success("🟢 **Paper Trading Mode Active:** Orders will be simulated safely without real capital risk.")
+    st.success("Paper Trading Mode Active: Orders will be simulated safely without real capital risk.")
     
     col_p1, col_p2 = st.columns(2)
     with col_p1:
         if st.button("Start Paper Bot"):
-            st.toast("Paper Trading Bot Started Successfully!", icon="🚀")
+            st.success("Paper Trading Bot Started Successfully!")
     with col_p2:
         if st.button("Stop Paper Bot"):
-            st.toast("Paper Trading Bot Stopped.", icon="⏹️")
+            st.warning("Paper Trading Bot Stopped.")
 
 else:
-    st.warning("🔴 **Real Trading Mode Active:** Connected to live broker gateway. Capital risk is involved.")
+    st.warning("Real Trading Mode Active: Connected to live broker gateway. Capital risk is involved.")
     
     # Broker Login Card inside Real Mode
     broker_id = st.text_input("Broker User ID / Client Code", placeholder="e.g., 10EFJ")
@@ -90,9 +90,10 @@ else:
             else:
                 st.warning("Please enter both User ID and API Key.")
     with col_r2:
-        if st.button("Emergency Stop (Square Off All)"):
-            st.error("🚨 EMERGENCY SQUARE-OFF TRIGGERED!")
+        if st.button("Emergency Square Off"):
+            st.error("EMERGENCY SQUARE-OFF TRIGGERED!")
 
 # Footer
 st.markdown("---")
 st.markdown("<p style='text-align: center; color: gray; font-size: 12px;'>Powered by Cloud Web Engine • Secure & Real-time</p>", unsafe_allow_html=True)
+        
