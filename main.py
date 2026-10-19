@@ -91,7 +91,7 @@ with col1:
     st.markdown(f"<h2>{nifty_price:,.2f}</h2>", unsafe_allow_html=True)
     st.markdown(f"<p style='font-size: 1.25rem; {color_style}'>{sign_str}{nifty_change} ({sign_str}{nifty_change/200:.2f}%)</p>", unsafe_allow_html=True)
     
-    if 'paper_active' not in st.session_state:
+if 'paper_active' not in st.session_state:
     st.session_state.paper_active = False
 
 p_status = st.session_state.paper_active
