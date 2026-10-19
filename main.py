@@ -57,21 +57,27 @@ st.markdown('<p class="subtitle">Professional Automated Trading Terminal</p>', u
 st.divider()
 
 # Live Market Data Simulation with Dynamic Green/Red Colors
-# Real Trading Toggle Section
 if 'real_active' not in st.session_state:
     st.session_state.real_active = False
-if 'paper_active' not in st.session_state:
-    st.session_state.paper_active = False
 
-real_label = "🟢 Real Trading: ON" if st.session_state.real_active else "🔴 Real Trading: OFF"
-if st.button(real_label, use_container_width=True, key="real_btn"):
-    if not st.session_state.real_active:
-        st.session_state.real_active = True
-        st.session_state.paper_active = False
-        st.success("Real Trading Activated!")
-    else:
-        st.session_state.real_active = False
-        st.warning("Real Trading Stopped.")
+r_status = st.session_state.real_active
+r_border = "#22C55E" if r_status else "#EF4444"
+r_bg = "rgba(34, 197, 94, 0.1)" if r_status else "rgba(239, 68, 68, 0.1)"
+r_txt = "⚡ REAL TRADING STATUS: ACTIVE (ON)" if r_status else "🛑 REAL TRADING STATUS: PAUSED (OFF)"
+r_color = "#22C55E" if r_status else "#EF4444"
+
+st.markdown(f"""
+    <div style="background-color: {r_bg}; border: 2px solid {r_border}; padding: 12px; border-radius: 10px; margin-bottom: 5px;">
+        <span style="color: {r_color}; font-weight: bold; font-size: 0.95rem;">{r_txt}</span>
+    </div>
+""", unsafe_allow_html=True)
+
+new_r = st.toggle("Real Trading Control", value=st.session_state.real_active, key="real_switch")
+if new_r != st.session_state.real_active:
+    st.session_state.real_active = new_r
+    if new_r:
+        st.session_state.paper_active = False  # Paper automatic off
+    st.rerun()
 
 col1, col2 = st.columns(2)
 
@@ -84,16 +90,27 @@ with col1:
         
     st.markdown(f"<h2>{nifty_price:,.2f}</h2>", unsafe_allow_html=True)
     st.markdown(f"<p style='font-size: 1.25rem; {color_style}'>{sign_str}{nifty_change} ({sign_str}{nifty_change/200:.2f}%)</p>", unsafe_allow_html=True)
-    # Paper Trading Toggle Section
-paper_label = "🟢 Paper Trading: ON" if st.session_state.paper_active else "🔴 Paper Trading: OFF"
-if st.button(paper_label, use_container_width=True, key="paper_btn"):
-    if not st.session_state.paper_active:
-        st.session_state.paper_active = True
-        st.session_state.real_active = False
-        st.success("Paper Trading Activated!")
-    else:
-        st.session_state.paper_active = False
-        st.warning("Paper Trading Stopped.")
+    if 'paper_active' not in st.session_state:
+    st.session_state.paper_active = False
+
+p_status = st.session_state.paper_active
+p_border = "#22C55E" if p_status else "#EF4444"
+p_bg = "rgba(34, 197, 94, 0.1)" if p_status else "rgba(239, 68, 68, 0.1)"
+p_txt = "⚡ PAPER TRADING STATUS: ACTIVE (ON)" if p_status else "🛑 PAPER TRADING STATUS: PAUSED (OFF)"
+p_color = "#22C55E" if p_status else "#EF4444"
+
+st.markdown(f"""
+    <div style="background-color: {p_bg}; border: 2px solid {p_border}; padding: 12px; border-radius: 10px; margin-bottom: 5px;">
+        <span style="color: {p_color}; font-weight: bold; font-size: 0.95rem;">{p_txt}</span>
+    </div>
+""", unsafe_allow_html=True)
+
+new_p = st.toggle("Paper Trading Control", value=st.session_state.paper_active, key="paper_switch")
+if new_p != st.session_state.paper_active:
+    st.session_state.paper_active = new_p
+    if new_p:
+        st.session_state.real_active = False  # Real automatic off
+    st.rerun()
 
 with col2:
     st.markdown("### Paper Portfolio P&L")
