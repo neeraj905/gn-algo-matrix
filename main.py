@@ -57,6 +57,22 @@ st.markdown('<p class="subtitle">Professional Automated Trading Terminal</p>', u
 st.divider()
 
 # Live Market Data Simulation with Dynamic Green/Red Colors
+# Real Trading Toggle Section
+if 'real_active' not in st.session_state:
+    st.session_state.real_active = False
+if 'paper_active' not in st.session_state:
+    st.session_state.paper_active = False
+
+real_label = "🟢 Real Trading: ON" if st.session_state.real_active else "🔴 Real Trading: OFF"
+if st.button(real_label, use_container_width=True, key="real_btn"):
+    if not st.session_state.real_active:
+        st.session_state.real_active = True
+        st.session_state.paper_active = False
+        st.success("Real Trading Activated!")
+    else:
+        st.session_state.real_active = False
+        st.warning("Real Trading Stopped.")
+
 col1, col2 = st.columns(2)
 
 with col1:
@@ -65,9 +81,19 @@ with col1:
     nifty_change = round(random.uniform(-20.0, 35.0), 2)
     color_style = "color: #22C55E; font-weight: bold;" if nifty_change >= 0 else "color: #EF4444; font-weight: bold;"
     sign_str = "+" if nifty_change >= 0 else ""
-    
+        
     st.markdown(f"<h2>{nifty_price:,.2f}</h2>", unsafe_allow_html=True)
     st.markdown(f"<p style='font-size: 1.25rem; {color_style}'>{sign_str}{nifty_change} ({sign_str}{nifty_change/200:.2f}%)</p>", unsafe_allow_html=True)
+    # Paper Trading Toggle Section
+paper_label = "🟢 Paper Trading: ON" if st.session_state.paper_active else "🔴 Paper Trading: OFF"
+if st.button(paper_label, use_container_width=True, key="paper_btn"):
+    if not st.session_state.paper_active:
+        st.session_state.paper_active = True
+        st.session_state.real_active = False
+        st.success("Paper Trading Activated!")
+    else:
+        st.session_state.paper_active = False
+        st.warning("Paper Trading Stopped.")
 
 with col2:
     st.markdown("### Paper Portfolio P&L")
