@@ -67,7 +67,7 @@ with col1:
     sign_str = "+" if nifty_change >= 0 else ""
     
     st.markdown(f"<h2>{nifty_price:,.2f}</h2>", unsafe_allow_html=True)
-    st.markdown(f"<p style='{color_style}'>{sign_str}{nifty_change} ({sign_str}{nifty_change/200:.2f}%)</p>", unsafe_allow_html=True)
+    st.markdown(f"<p style='font-size: 1.25rem; {color_style}'>{sign_str}{nifty_change} ({sign_str}{nifty_change/200:.2f}%)</p>", unsafe_allow_html=True)
 
 with col2:
     st.markdown("### Paper Portfolio P&L")
@@ -76,7 +76,7 @@ with col2:
     pnl_sign = "+" if pnl_value >= 0 else ""
     
     st.markdown(f"<h2>{pnl_value:,.2f}</h2>", unsafe_allow_html=True)
-    st.markdown(f"<p style='{pnl_color}'>{pnl_sign}{pnl_value * 0.01:.2f}</p>", unsafe_allow_html=True)
+    st.markdown(f"<p style='font-size: 1.25rem; {pnl_color}'>{pnl_sign}{pnl_value * 0.01:.2f}</p>", unsafe_allow_html=True)
 
 st.divider()
 
