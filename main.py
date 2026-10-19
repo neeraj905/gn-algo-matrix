@@ -90,6 +90,7 @@ with col1:
         
     st.markdown(f"<h2>{nifty_price:,.2f}</h2>", unsafe_allow_html=True)
     st.markdown(f"<p style='font-size: 1.25rem; {color_style}'>{sign_str}{nifty_change} ({sign_str}{nifty_change/200:.2f}%)</p>", unsafe_allow_html=True)
+    
     if 'paper_active' not in st.session_state:
     st.session_state.paper_active = False
 
@@ -109,7 +110,7 @@ new_p = st.toggle("Paper Trading Control", value=st.session_state.paper_active, 
 if new_p != st.session_state.paper_active:
     st.session_state.paper_active = new_p
     if new_p:
-        st.session_state.real_active = False  # Real automatic off
+        st.session_state.real_active = False
     st.rerun()
 
 with col2:
