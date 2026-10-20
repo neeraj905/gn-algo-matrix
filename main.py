@@ -1,14 +1,7 @@
 import streamlit as st
 import random
 import time
-
 from angel_api import AngelOneConnector
-
-
-import streamlit as st
-import random
-import time
-from angel_api import AngelOneConnector  # <-- Yahan import add karna hai
 
 # Page Configuration & Rich Charcoal Navy
 st.set_page_config(
@@ -98,7 +91,7 @@ st.markdown('<p class="subtitle">Professional Automated Trading Terminal</p>', u
 
 st.divider()
 
-# Live Market Data Simulation with Dynamic Green/Red Colors
+# Live Market Data (Angel One Live Integration or Simulation Fallback)
 if 'real_active' not in st.session_state:
     st.session_state.real_active = False
 
@@ -125,8 +118,23 @@ col1, col2 = st.columns(2)
 
 with col1:
     st.markdown("### Live Nifty Index")
-    nifty_price = 24350.25 + round(random.uniform(-5.0, 5.0), 2)
-    nifty_change = round(random.uniform(-20.0, 35.0), 2)
+    
+    # Check if connected to Angel One to fetch live LTP data
+    live_price = None
+    if 'is_connected' in st.session_state and st.session_state.is_connected and 'angel_connector' in st.session_state:
+        try:
+            live_price = st.session_state.angel_connector.get_ltp("NSE", "Nifty 50", "99926000")
+        except Exception as e:
+            st.error(f"API Error: {e}")
+            live_price = None
+
+    if live_price:
+        nifty_price = live_price
+        nifty_change = 15.50
+    else:
+        nifty_price = 24350.25 + round(random.uniform(-5.0, 5.0), 2)
+        nifty_change = round(random.uniform(-20.0, 35.0), 2)
+
     color_style = "color: #22C55E; font-weight: bold;" if nifty_change >= 0 else "color: #EF4444; font-weight: bold;"
     sign_str = "+" if nifty_change >= 0 else ""
         
