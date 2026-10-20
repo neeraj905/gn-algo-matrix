@@ -24,17 +24,13 @@ class AngelOneConnector:
         except Exception as e:
             return False, str(e)
 
-    def get_live_price(self, exchange, symbol_token, tradingsymbol):
+    def get_ltp(self, exchange, tradingsymbol, symboltoken):
         try:
-            if not self.auth_token:
-                return None, "Not Logged In"
-            
-            # Fetching LTP data from Angel One
-            response = self.smart_api.ltpData(exchange, tradingsymbol, symbol_token)
+            # Fetching Last Traded Price from Angel One SmartAPI
+            response = self.smart_api.ltpData(exchange, tradingsymbol, symboltoken)
             if response and response.get('status'):
-                return response['data']['ltp'], "Success"
-            else:
-                return None, "Failed to fetch price"
+                return response['data']['ltp']
+            return None
         except Exception as e:
-            return None, str(e)
-                       
+            return None
+        
