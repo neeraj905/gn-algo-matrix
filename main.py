@@ -2,12 +2,54 @@ import streamlit as st
 import random
 import time
 
-# Page Configuration & Rich Charcoal Navy Theme Setup
+from angel_api import AngelOneConnector
+
+
+import streamlit as st
+import random
+import time
+from angel_api import AngelOneConnector  # <-- Yahan import add karna hai
+
+# Page Configuration & Rich Charcoal Navy
 st.set_page_config(
     page_title="Algo Trading Portal",
     page_icon="📈",
     layout="centered"
 )
+
+# --- Sidebar Menu Bar Integration ---
+st.sidebar.markdown("## 🛡️ KING SHIELD MENU")
+menu_option = st.sidebar.selectbox("Navigation", ["Dashboard", "Angel One Credentials", "Logs & Status"])
+
+if menu_option == "Angel One Credentials":
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("🔑 Broker Settings")
+    
+    api_key_input = st.sidebar.text_input("API Key", type="password")
+    client_id_input = st.sidebar.text_input("Client ID")
+    password_input = st.sidebar.text_input("Password / MPIN", type="password")
+    totp_secret = st.sidebar.text_input("TOTP Secret Key", type="password")
+    
+    if st.sidebar.button("Connect Angel One"):
+        if api_key_input and client_id_input and password_input and totp_secret:
+            with st.spinner("Connecting to Angel One..."):
+                connector = AngelOneConnector(api_key_input, client_id_input, password_input, totp_secret)
+                success, message = connector.login()
+                if success:
+                    st.sidebar.success(message)
+                    st.session_state.angel_connector = connector
+                    st.session_state.is_connected = True
+                else:
+                    st.sidebar.error(f"Error: {message}")
+        else:
+            st.sidebar.warning("Please fill all credential fields!")
+
+elif menu_option == "Dashboard":
+    if 'is_connected' in st.session_state and st.session_state.is_connected:
+        st.sidebar.success("🟢 Angel One Connected")
+    else:
+        st.sidebar.warning("🔴 Angel One Disconnected (Using Simulation)")
+
 
 # Custom CSS for Soft Dark Blue-Gray Background, 4x Bold Golden Title, and Trading Colors
 st.markdown("""
