@@ -3,12 +3,17 @@ import random
 import time
 from angel_api import AngelOneConnector
 
+from streamlit_autorefresh import st_autorefresh
+
 # Page Configuration & Rich Charcoal Navy
 st.set_page_config(
     page_title="Algo Trading Portal",
     page_icon="📈",
     layout="centered"
 )
+
+# Har 5 second mein automatic live refresh ke liye
+st_autorefresh(interval=5000, limit=None, key="live_market_refresh")
 
 # --- Sidebar Menu Bar Integration ---
 st.sidebar.markdown("## 🛡️ KING SHIELD MENU")
