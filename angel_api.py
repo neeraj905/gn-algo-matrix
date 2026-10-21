@@ -28,9 +28,12 @@ class AngelOneConnector:
         try:
             # Fetching Last Traded Price from Angel One SmartAPI
             response = self.smart_api.ltpData(exchange, tradingsymbol, symboltoken)
-            if response and response.get('status'):
-                return response['data']['ltp']
+            if response and 'data' in response:
+                # Handle different response structures from Angel One API
+                if isinstance(response['data'], dict):
+                    if 'ltp' in response['data']:
+                        return float(response['data']['ltp'])
             return None
         except Exception as e:
             return None
-        
+            
