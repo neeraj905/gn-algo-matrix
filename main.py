@@ -128,7 +128,7 @@ with col1:
     live_price = None
     if 'is_connected' in st.session_state and st.session_state.is_connected and 'angel_connector' in st.session_state:
         try:
-            live_price = st.session_state.angel_connector.get_ltp("NSE", "Nifty 50", "99926000")
+            live_price = st.session_state.angel_connector.get_ltp("NSE", "Nifty 50", "26000")
         except Exception as e:
             st.error(f"API Error: {e}")
             live_price = None
