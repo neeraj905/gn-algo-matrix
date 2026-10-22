@@ -28,19 +28,31 @@ if menu_option == "Angel One Credentials":
     password_input = st.sidebar.text_input("Password / MPIN", type="password")
     totp_secret = st.sidebar.text_input("TOTP Secret Key", type="password")
     
-    if st.sidebar.button("Connect Angel One"):
-        if api_key_input and client_id_input and password_input and totp_secret:
-            with st.spinner("Connecting to Angel One..."):
-                connector = AngelOneConnector(api_key_input, client_id_input, password_input, totp_secret)
-                success, message = connector.login()
-                if success:
-                    st.sidebar.success(message)
-                    st.session_state.angel_connector = connector
-                    st.session_state.is_connected = True
-                else:
-                    st.sidebar.error(f"Error: {message}")
-        else:
-            st.sidebar.warning("Please fill all credential fields!")
+        if st.session_state.get("broker_connected", False):
+        st.sidebar.success(f"Connected ID: {st.session_state.get('client_id', 'N/A')}")
+        if st.sidebar.button("🗑️ Delete / Disconnect Broker"):
+            st.session_state.broker_connected = False
+            st.session_state.angel_connector = None
+            st.session_state.client_id = ""
+            st.sidebar.success("Broker disconnected successfully!")
+            st.rerun()
+    else:
+        if st.sidebar.button("Connect Broker"):
+            if api_key_input and client_id_input and password_input and totp_secret:
+                with st.spinner("Connecting to Angel One..."):
+                    from angel_api import AngelAPIHandler
+                    connector = AngelAPIHandler(api_key_input, client_id_input, password_input, totp_secret)
+                    success, msg = connector.connect()
+                    if success:
+                        st.session_state.broker_connected = True
+                        st.session_state.angel_connector = connector
+                        st.session_state.client_id = client_id_input
+                        st.sidebar.success(msg)
+                        st.rerun()
+                    else:
+                        st.sidebar.error(f"Connection Failed: {msg}")
+            else:
+                st.sidebar.warning("Please fill all broker credentials.")
 
 elif menu_option == "Dashboard":
     if 'is_connected' in st.session_state and st.session_state.is_connected:
