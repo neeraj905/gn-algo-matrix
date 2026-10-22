@@ -1,39 +1,45 @@
-from SmartApi import SmartConnect
+import smartapi
+from smartapi import SmartConnect
 import pyotp
 
-class AngelOneConnector:
-    def __init__(self, api_key, client_id, password, totp_token):
+class AngelAPIHandler:
+    def __init__(self, api_key, client_id, password, totp_secret):
         self.api_key = api_key
         self.client_id = client_id
         self.password = password
-        self.totp_token = totp_token
-        self.smart_api = SmartConnect(api_key=self.api_key)
-        self.auth_token = None
-
-    def login(self):
+        self.totp_secret = totp_secret
+        self.smart_api = None
+        self.session_data = None
+        
+    def connect(self):
         try:
+            # Initialize SmartConnect with API Key
+            self.smart_api = SmartConnect(api_key=self.api_key)
+            
             # Generate TOTP
-            totp = pyotp.TOTP(self.totp_token).now()
-            # Login request
+            totp = pyotp.TOTP(self.totp_secret).now()
+            
+            # Generate Session
             data = self.smart_api.generateSession(self.client_id, self.password, totp)
+            
             if data and data.get('status'):
-                self.auth_token = data['data']['jwtToken']
-                return True, "Login Successful!"
+                self.session_data = data['data']
+                return True, "Broker connected successfully!"
             else:
-                return False, data.get('message', 'Login Failed')
+                return False, data.get('message', 'Authentication failed')
         except Exception as e:
             return False, str(e)
 
-    def get_ltp(self, exchange, tradingsymbol, symboltoken):
+    def get_ltp(self, exchange, symbol, token):
         try:
-            # Fetching Last Traded Price from Angel One SmartAPI
-            response = self.smart_api.ltpData(exchange, tradingsymbol, symboltoken)
-            if response and 'data' in response:
-                # Handle different response structures from Angel One API
-                if isinstance(response['data'], dict):
-                    if 'ltp' in response['data']:
-                        return float(response['data']['ltp'])
-            return None
-        except Exception as e:
-            return None
+            if not self.smart_api:
+                return None
             
+            # Fetch LTP data directly from Angel One SmartAPI
+            response = self.smart_api.ltpData(exchange, symbol, token)
+            if response and 'data' in response:
+                return float(response['data']['ltp'])
+        except Exception as e:
+            print(f"Error fetching LTP: {e}")
+        return None
+        
