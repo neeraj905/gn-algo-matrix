@@ -12,13 +12,8 @@ class AngelAPIHandler:
         
     def connect(self):
         try:
-            # Initialize SmartConnect with API Key (Capital S and A)
             self.smart_api = SmartConnect(api_key=self.api_key)
-            
-            # Generate TOTP
             totp = pyotp.TOTP(self.totp_secret).now()
-            
-            # Generate Session
             data = self.smart_api.generateSession(self.client_id, self.password, totp)
             
             if data and data.get('status'):
@@ -33,12 +28,10 @@ class AngelAPIHandler:
         try:
             if not self.smart_api:
                 return None
-            
-            # Fetch LTP data directly from Angel One SmartAPI
             response = self.smart_api.ltpData(exchange, symbol, token)
             if response and 'data' in response:
                 return float(response['data']['ltp'])
         except Exception as e:
             print(f"Error fetching LTP: {e}")
         return None
-        
+                
