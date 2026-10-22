@@ -28,7 +28,7 @@ if menu_option == "Angel One Credentials":
     password_input = st.sidebar.text_input("Password / MPIN", type="password")
     totp_secret = st.sidebar.text_input("TOTP Secret Key", type="password")
     
-    if st.session_state.get("broker_connected", False):
+  if st.session_state.get("broker_connected", False):
     st.sidebar.success(f"Connected ID: {st.session_state.get('client_id', 'N/A')}")
     if st.sidebar.button("🗑️ Delete / Disconnect Broker"):
         st.session_state.broker_connected = False
@@ -53,6 +53,7 @@ else:
                     st.sidebar.error(f"Connection Failed: {msg}")
         else:
             st.sidebar.warning("Please fill all broker credentials.")
+                    
 
 elif menu_option == "Dashboard":
     if 'is_connected' in st.session_state and st.session_state.is_connected:
