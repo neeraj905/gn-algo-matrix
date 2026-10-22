@@ -1,7 +1,7 @@
 import streamlit as st
 import random
 import time
-from angel_api import AngelOneConnector
+from angel_api import AngelAPIHandler
 
 from streamlit_autorefresh import st_autorefresh
 
