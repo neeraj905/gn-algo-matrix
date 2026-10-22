@@ -1,5 +1,4 @@
-import smartapi
-from smartapi import SmartConnect
+from SmartApi import SmartConnect
 import pyotp
 
 class AngelAPIHandler:
@@ -13,7 +12,7 @@ class AngelAPIHandler:
         
     def connect(self):
         try:
-            # Initialize SmartConnect with API Key
+            # Initialize SmartConnect with API Key (Capital S and A)
             self.smart_api = SmartConnect(api_key=self.api_key)
             
             # Generate TOTP
