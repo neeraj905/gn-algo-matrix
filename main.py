@@ -62,6 +62,7 @@ else:
                     st.sidebar.error(f"Connection Failed: {msg}")
         else:
             st.sidebar.warning("Please fill all broker credentials.")
+                    
             
 
 # Custom CSS for Soft Dark Blue-Gray Background, 4x Bold Golden Title, and Trading Colors
