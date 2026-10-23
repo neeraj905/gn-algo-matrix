@@ -24,9 +24,9 @@ if menu_option == "Angel One Credentials":
     st.sidebar.subheader("🔑 Broker Settings")
     
     api_key_input = st.sidebar.text_input("API Key", value=st.session_state.get("api_key", ""), type="password", key="input_api_key")
-client_id_input = st.sidebar.text_input("Client ID", value=st.session_state.get("client_id", ""), key="input_client_id")
-password_input = st.sidebar.text_input("Password / MPIN", value=st.session_state.get("password", ""), type="password", key="input_password")
-totp_secret = st.sidebar.text_input("TOTP Secret Key", value=st.session_state.get("totp", ""), type="password", key="input_totp")
+    client_id_input = st.sidebar.text_input("Client ID", value=st.session_state.get("client_id", ""), key="input_client_id")
+    password_input = st.sidebar.text_input("Password / MPIN", value=st.session_state.get("password", ""), type="password", key="input_password")
+    totp_secret = st.sidebar.text_input("TOTP Secret Key", value=st.session_state.get("totp", ""), type="password", key="input_totp")
     
 elif menu_option == "Dashboard":
     if 'is_connected' in st.session_state and st.session_state.is_connected:
