@@ -33,7 +33,7 @@ elif menu_option == "Dashboard":
         st.sidebar.success("🟢 Angel One Connected")
     else:
         st.sidebar.warning("🔴 Angel One Disconnected (Using Simulation)")
-
+        
 if st.session_state.get("broker_connected", False):
     st.sidebar.success(f"Connected ID: {st.session_state.get('client_id', 'N/A')}")
     if st.sidebar.button("🗑️ Delete / Disconnect Broker"):
@@ -62,7 +62,7 @@ else:
                     st.sidebar.error(f"Connection Failed: {msg}")
         else:
             st.sidebar.warning("Please fill all broker credentials.")
-
+            
 
 # Custom CSS for Soft Dark Blue-Gray Background, 4x Bold Golden Title, and Trading Colors
 st.markdown("""
