@@ -28,9 +28,6 @@ if menu_option == "Angel One Credentials":
     password_input = st.sidebar.text_input("Password / MPIN", type="password")
     totp_secret = st.sidebar.text_input("TOTP Secret Key", type="password")
     
-  if st. fill all broker credentials.")
-                    
-
 elif menu_option == "Dashboard":
     if 'is_connected' in st.session_state and st.session_state.is_connected:
         st.sidebar.success("🟢 Angel One Connected")
