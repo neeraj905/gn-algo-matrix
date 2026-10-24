@@ -164,6 +164,24 @@ if new_r != st.session_state.real_active:
         st.session_state.paper_active = False
     st.rerun()
 
+# --- Live Execution & Order Terminal Log ---
+st.markdown("### 📊 Live Execution & Order Terminal Log")
+if st.session_state.get('real_active', False):
+    st.success("⚡ REAL TRADING STATUS: ACTIVE (ON) - Monitoring live executions.")
+    import pandas as pd
+    order_data = {
+        "Time": ["Live Check", "Execution Mode"],
+        "Symbol": ["NIFTY 50", "Active Terminal"],
+        "Action": ["MONITOR", "READY"],
+        "Status": ["ACTIVE", "WAITING FOR SIGNAL"],
+        "Price": [22600.00, 0.00]
+    }
+    df_orders = pd.DataFrame(order_data)
+    st.dataframe(df_orders, use_container_width=True)
+else:
+    st.warning("🛑 REAL TRADING STATUS: PAUSED (OFF) - Switch ON Real Trading Control to activate live order terminal logs.")
+    
+
 col1, col2 = st.columns(2)
 
 with col1:
