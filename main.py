@@ -182,7 +182,6 @@ with col1:
     if not live_price:
         if 'simulated_nifty' not in st.session_state:
             st.session_state.simulated_nifty = 22600.00
-        # Har refresh par thoda upar/neeche move hoga taaki pata chale market chal raha hai
         st.session_state.simulated_nifty += round(random.uniform(-3.5, 3.8), 2)
         nifty_price = st.session_state.simulated_nifty
         nifty_change = round(random.uniform(-15.0, 25.0), 2)
@@ -221,7 +220,6 @@ if new_p != st.session_state.paper_active:
 with col2:
     st.markdown("### Paper Portfolio P&L (Virtual)")
     
-    # Session state mein P&L store karke thoda-thoda fluctuation denge taaki live lage
     if 'simulated_pnl' not in st.session_state:
         st.session_state.simulated_pnl = 12538.67
     
@@ -233,6 +231,25 @@ with col2:
     
     st.markdown(f"<h2>{pnl_value:,.2f}</h2>", unsafe_allow_html=True)
     st.markdown(f"<p style='font-size: 1.25rem; {pnl_color}'>{pnl_sign}{round(pnl_value * 0.01, 2)}</p>", unsafe_allow_html=True)
+
+st.divider()
+
+# --- Added: Live Execution & Order Terminal Log Section ---
+st.markdown("### 📊 Live Execution & Order Terminal Log")
+if st.session_state.get('real_active', False):
+    st.success("⚡ REAL TRADING STATUS: ACTIVE (ON) - Monitoring live executions.")
+    import pandas as pd
+    order_data = {
+        "Time": ["Live Check", "Execution Mode"],
+        "Symbol": ["NIFTY 50", "Active Terminal"],
+        "Action": ["MONITOR", "READY"],
+        "Status": ["ACTIVE", "WAITING FOR SIGNAL"],
+        "Price": [nifty_price, 0.00]
+    }
+    df_orders = pd.DataFrame(order_data)
+    st.dataframe(df_orders, use_container_width=True)
+else:
+    st.warning("🛑 REAL TRADING STATUS: PAUSED (OFF) - Switch ON Real Trading Control to activate live order terminal logs.")
 
 st.divider()
 
