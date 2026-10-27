@@ -120,6 +120,11 @@ else:
 st.markdown("""
     <style>
     .stApp { background-color: #0F172A; color: #F8FAFC; }
+
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+
     .golden-title {
         font-size: 3.2rem !important;
         font-weight: 900 !important;
