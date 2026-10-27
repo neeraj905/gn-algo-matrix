@@ -123,7 +123,22 @@ st.markdown("""
 
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
-    [data-testid="collapsedControl"] {visibility: visible !important; display: block !important;}
+    [data-testid="collapsedControl"] {
+    position: relative !important;
+    top: 0px !important;
+    left: 0px !important;
+    margin-bottom: 15px !important;
+    background-color: #1E293B !important;
+    border-radius: 8px !important;
+    border: 1px solid #334155 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 100% !important;
+    padding: 10px !important;
+    z-index: 999999 !important;
+}
+
     
     .golden-title {
         font-size: 3.2rem !important;
