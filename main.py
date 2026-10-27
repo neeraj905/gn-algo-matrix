@@ -123,8 +123,8 @@ st.markdown("""
 
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
-    header {visibility: hidden;}
-
+    [data-testid="collapsedControl"] {visibility: visible !important; display: block !important;}
+    
     .golden-title {
         font-size: 3.2rem !important;
         font-weight: 900 !important;
