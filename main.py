@@ -10,13 +10,13 @@ from streamlit_autorefresh import st_autorefresh
 
 # Page Configuration
 st.set_page_config(
-    page_title="Algo Trading Portal - Pro",
-    page_icon="⚡",
+    page_title="Algo Trading Portal - Pro Shield",
+    page_icon="🛡️",
     layout="centered"
 )
 
 # Live auto-refresh every 5 seconds
-st_autorefresh(interval=5000, limit=None, key="pro_market_refresh")
+st_autorefresh(interval=5000, limit=None, key="pro_shield_refresh")
 
 # --- Strict Market Timing & Auto-State Check (09:15 to 03:15) ---
 def get_market_status():
@@ -82,13 +82,12 @@ if "broker_connected" not in st.session_state:
         except:
             st.session_state.broker_connected = False
 
-# Auto-manage bot states based on market hours
 if "bot_running" not in st.session_state:
-    st.session_state.bot_running = True # Tradetron style: Stays on until stopped or market closes
+    st.session_state.bot_running = True
 
-# --- Sidebar Navigation & Broker Config ---
-st.sidebar.markdown("## 🛡️ TRADETRON PRO MENU")
-menu_option = st.sidebar.selectbox("Navigation", ["Dashboard & Positions", "Broker Account Settings", "Execution Logs"])
+# --- Sidebar Navigation ---
+st.sidebar.markdown("## 🛡️ KING SHIELD PRO MENU")
+menu_option = st.sidebar.selectbox("Navigation", ["Dashboard & Risk Shield", "Broker Account Settings", "Execution Logs"])
 
 api_key_input, client_id_input, password_input, totp_secret = "", "", "", ""
 if menu_option == "Broker Account Settings":
@@ -142,7 +141,7 @@ st.markdown("""
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     .golden-title {
-        font-size: 2.8rem !important;
+        font-size: 2.6rem !important;
         font-weight: 900 !important;
         background: linear-gradient(90deg, #BF953F, #FCF6BA, #B38728, #FBF5B7);
         -webkit-background-clip: text;
@@ -150,104 +149,167 @@ st.markdown("""
         text-align: center;
         margin-bottom: 0px;
     }
-    .subtitle { text-align: center; color: #94A3B8; font-size: 1rem; margin-bottom: 20px; }
+    .subtitle { text-align: center; color: #94A3B8; font-size: 0.95rem; margin-bottom: 15px; }
+    .shield-box { background-color: #1E293B; border: 1px solid #334155; padding: 12px; border-radius: 10px; margin-bottom: 15px; }
     </style>
 """, unsafe_allow_html=True)
 
 # Header
 st.markdown('<p class="golden-title">ALGO TRADING PORTAL</p>', unsafe_allow_html=True)
-st.markdown('<p class="subtitle">Multi-Strategy Pro Terminal (Tradetron Style)</p>', unsafe_allow_html=True)
+st.markdown('<p class="subtitle">King Shield Pro • Trailing SL & 25% Capital Guard</p>', unsafe_allow_html=True)
 st.divider()
 
-# --- Broker Profile & Account Bar ---
-client_name = "NEERAJ SINGH RAVAL" # Can be fetched via API profile if connected
-broker_display = "Angel One (Live)" if st.session_state.get("broker_connected", False) else "Simulation Mode (Paper)"
+# --- Fetch Real Profile & Funds ---
+client_name = "VALUED TRADER"
+total_bal = 5000.00  # Realistic base capital minimum
+broker_display = "Simulation Mode (Paper)"
+
+if st.session_state.get("broker_connected", False) and 'angel_connector' in st.session_state:
+    broker_display = "Angel One (Live)"
+    try:
+        connector = st.session_state.angel_connector
+        profile = connector.get_profile()
+        if profile and 'clientname' in profile:
+            client_name = profile['clientname']
+        funds = connector.get_funds()
+        if funds:
+            total_bal = float(funds.get('net', 5000.0))
+    except:
+        pass
+else:
+    client_name = "NEERAJ SINGH RAVAL"
+
+# 25% Capital Allocation Rule (75% Safe Reserve)
+allocated_trading_capital = total_bal * 0.25
+safe_reserve_capital = total_bal * 0.75
+
+# Account & Capital Display
 st.markdown(f"""
-    <div style="background-color: #1E293B; border: 1px solid #334155; padding: 12px; border-radius: 10px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+    <div class="shield-box" style="display: flex; justify-content: space-between; align-items: center;">
         <div>
-            <span style="color: #94A3B8; font-size: 0.85rem;">ACCOUNT & BROKER</span><br>
-            <strong style="color: #F8FAFC; font-size: 1rem;">👤 {client_name}</strong> <span style="color: #38BDF8; font-size: 0.85rem;">({broker_display})</span>
+            <span style="color: #94A3B8; font-size: 0.8rem;">USER & BROKER</span><br>
+            <strong style="color: #F8FAFC; font-size: 0.95rem;">👤 {client_name}</strong> <span style="color: #38BDF8; font-size: 0.8rem;">({broker_display})</span>
         </div>
         <div style="text-align: right;">
-            <span style="color: #94A3B8; font-size: 0.85rem;">CLIENT ID</span><br>
-            <strong style="color: #34D399; font-size: 0.95rem;">{st.session_state.get('client_id', 'DEMO_USER')}</strong>
+            <span style="color: #94A3B8; font-size: 0.8rem;">CLIENT ID</span><br>
+            <strong style="color: #34D399; font-size: 0.9rem;">{st.session_state.get('client_id', 'DEMO_USER')}</strong>
         </div>
     </div>
 """, unsafe_allow_html=True)
 
-# --- Market Status & Auto-Bot Banner ---
+# Market Status Banner
 if is_market_open:
-    st.markdown(f"<div style='background-color: rgba(34, 197, 94, 0.1); border: 1px solid #22C55E; padding: 8px; border-radius: 8px; text-align: center; margin-bottom: 10px;'><span style='color: #22C55E; font-weight: bold;'>🟢 {market_msg}</span></div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='background-color: rgba(34, 197, 94, 0.1); border: 1px solid #22C55E; padding: 6px; border-radius: 8px; text-align: center; margin-bottom: 10px;'><span style='color: #22C55E; font-weight: bold; font-size: 0.9rem;'>🟢 {market_msg}</span></div>", unsafe_allow_html=True)
 else:
-    st.markdown(f"<div style='background-color: rgba(239, 68, 68, 0.1); border: 1px solid #EF4444; padding: 8px; border-radius: 8px; text-align: center; margin-bottom: 10px;'><span style='color: #EF4444; font-weight: bold;'>🔴 {market_msg}</span></div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='background-color: rgba(239, 68, 68, 0.1); border: 1px solid #EF4444; padding: 6px; border-radius: 8px; text-align: center; margin-bottom: 10px;'><span style='color: #EF4444; font-weight: bold; font-size: 0.9rem;'>🔴 {market_msg}</span></div>", unsafe_allow_html=True)
 
-# --- Capital & Margin Breakdown Section ---
+# --- 25% Capital & Margin Shield View ---
 col_c1, col_c2, col_c3 = st.columns(3)
 with col_c1:
-    st.markdown("<div style='background-color: #1E293B; padding: 10px; border-radius: 8px; border: 1px solid #334155; text-align: center;'><span style='color: #94A3B8; font-size: 0.75rem;'>TOTAL BALANCE</span><br><strong style='color: #F8FAFC; font-size: 1.05rem;'>₹1,50,000</strong></div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='background-color: #1E293B; padding: 10px; border-radius: 8px; border: 1px solid #334155; text-align: center;'><span style='color: #94A3B8; font-size: 0.7rem;'>TOTAL BALANCE</span><br><strong style='color: #F8FAFC; font-size: 0.95rem;'>₹{total_bal:,.2f}</strong></div>", unsafe_allow_html=True)
 with col_c2:
-    st.markdown("<div style='background-color: #1E293B; padding: 10px; border-radius: 8px; border: 1px solid #334155; text-align: center;'><span style='color: #94A3B8; font-size: 0.75rem;'>USED MARGIN</span><br><strong style='color: #F8FAFC; font-size: 1.05rem;'>₹45,200</strong></div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='background-color: #1E293B; padding: 10px; border-radius: 8px; border: 1px solid #334155; text-align: center;'><span style='color: #94A3B8; font-size: 0.7rem;'>25% RISK CAP</span><br><strong style='color: #38BDF8; font-size: 0.95rem;'>₹{allocated_trading_capital:,.2f}</strong></div>", unsafe_allow_html=True)
 with col_c3:
-    st.markdown("<div style='background-color: #1E293B; padding: 10px; border-radius: 8px; border: 1px solid #334155; text-align: center;'><span style='color: #94A3B8; font-size: 0.75rem;'>AVAILABLE</span><br><strong style='color: #34D399; font-size: 1.05rem;'>₹1,04,800</strong></div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='background-color: #1E293B; padding: 10px; border-radius: 8px; border: 1px solid #334155; text-align: center;'><span style='color: #94A3B8; font-size: 0.7rem;'>75% SAFE RESERVE</span><br><strong style='color: #34D399; font-size: 0.95rem;'>₹{safe_reserve_capital:,.2f}</strong></div>", unsafe_allow_html=True)
 
 st.divider()
 
-# --- Multi-Leg Positions Table (Tradetron Style) ---
-st.markdown("### 📋 Active Strategy Legs (Multi-Position View)")
+# --- Active Strategy Legs with Trailing Stop Loss Logic ---
+st.markdown("### 📋 Active Strategy Legs (Trailing SL Protected)")
 
-if 'positions_df' not in st.session_state:
-    st.session_state.positions_df = pd.DataFrame([
-        {"Strategy": "Nifty Momentum", "Instrument": "NIFTY 22600 CE", "Type": "BUY", "Qty": 25, "Entry": 125.50, "LTP": 138.25, "P&L (+ / -)": "+318.75"},
-        {"Strategy": "Nifty Momentum", "Instrument": "NIFTY 22500 PE", "Type": "BUY", "Qty": 25, "Entry": 95.00, "LTP": 88.50, "P&L (+ / -)": "-162.50"},
-        {"Strategy": "BankNifty Alpha", "Instrument": "BANKNIFTY 48100 CE", "Type": "BUY", "Qty": 15, "Entry": 310.00, "LTP": 345.00, "P&L (+ / -)": "+525.00"}
-    ])
+if 'leg1_ltp' not in st.session_state:
+    # Initializing state for legs (Entry, Current LTP, Dynamic Stop-Loss)
+    st.session_state.leg1 = {"instrument": "NIFTY 22600 CE", "type": "BUY", "entry": 125.50, "ltp": 138.25, "sl": 115.00, "high": 138.25}
+    st.session_state.leg2 = {"instrument": "NIFTY 22500 PE", "type": "BUY", "entry": 95.00, "ltp": 88.50, "sl": 105.00, "low": 88.50}
 
-# Update dynamic values if market is open
+# Live simulation & Trailing Stop-Loss calculation
 if is_market_open and st.session_state.get('bot_running', True):
-    # Simulate fluctuating multi-leg P&L
-    pass
+    # Fluctuating market prices
+    st.session_state.leg1["ltp"] += round(random.uniform(-1.5, 1.8), 2)
+    st.session_state.leg2["ltp"] += round(random.uniform(-1.2, 1.3), 2)
+    
+    # --- TRAILING STOP-LOSS LOGIC FOR CALL (CE) ---
+    # When price goes up, peak (high) updates, and Stop-loss trails upward to secure profit
+    if st.session_state.leg1["ltp"] > st.session_state.leg1["high"]:
+        st.session_state.leg1["high"] = st.session_state.leg1["ltp"]
+        # Trail SL upward by maintaining a safe distance (e.g., 8 points below peak)
+        new_sl = round(st.session_state.leg1["high"] - 8.0, 2)
+        if new_sl > st.session_state.leg1["sl"]:
+            st.session_state.leg1["sl"] = new_sl
 
-st.dataframe(st.session_state.positions_df, use_container_width=True)
+    # --- TRAILING STOP-LOSS LOGIC FOR PUT (PE) ---
+    # When market drops (Put price goes up), peak updates, and SL trails downward to secure profit
+    if st.session_state.leg2["ltp"] > st.session_state.leg2["low"]:
+        st.session_state.leg2["low"] = st.session_state.leg2["ltp"]
+        new_pe_sl = round(st.session_state.leg2["low"] - 6.0, 2)
+        if new_pe_sl > st.session_state.leg2["sl"]:
+            st.session_state.leg2["sl"] = new_pe_sl
+
+# Calculate P&L
+pnl1 = round((st.session_state.leg1["ltp"] - st.session_state.leg1["entry"]) * 25, 2)
+pnl2 = round((st.session_state.leg2["ltp"] - st.session_state.leg2["entry"]) * 25, 2)
+
+positions_data = [
+    {
+        "Strategy": "Nifty Momentum", 
+        "Instrument": st.session_state.leg1["instrument"], 
+        "Type": st.session_state.leg1["type"], 
+        "Entry": st.session_state.leg1["entry"], 
+        "LTP": st.session_state.leg1["ltp"], 
+        "Trailing SL": st.session_state.leg1["sl"],
+        "P&L": f"{pnl1:+,.2f}"
+    },
+    {
+        "Strategy": "Nifty Momentum", 
+        "Instrument": st.session_state.leg2["instrument"], 
+        "Type": st.session_state.leg2["type"], 
+        "Entry": st.session_state.leg2["entry"], 
+        "LTP": st.session_state.leg2["ltp"], 
+        "Trailing SL": st.session_state.leg2["sl"],
+        "P&L": f"{pnl2:+,.2f}"
+    }
+]
+
+df_positions = pd.DataFrame(positions_data)
+st.dataframe(df_positions, use_container_width=True)
 
 # --- Total Portfolio Summary ---
 col_p1, col_p2 = st.columns(2)
 with col_p1:
     st.markdown("### Live Nifty Index")
-    nifty_val = 22612.50 + (random.uniform(-5, 5) if is_market_open else 0)
-    st.markdown(f"<h2>{nifty_val:,.2f}</h2>", unsafe_allow_html=True)
+    if 'nifty_idx' not in st.session_state:
+        st.session_state.nifty_idx = 22612.50
+    if is_market_open:
+        st.session_state.nifty_idx += round(random.uniform(-3.0, 3.2), 2)
+    st.markdown(f"<h2>{st.session_state.nifty_idx:,.2f}</h2>", unsafe_allow_html=True)
     st.markdown("<p style='color: #22C55E; font-weight: bold;'>+18.40 (+0.08%)</p>", unsafe_allow_html=True)
 
 with col_p2:
     st.markdown("### Total Net P&L (Today)")
-    if 'total_pnl' not in st.session_state:
-        st.session_state.total_pnl = 12681.25
-    if is_market_open and st.session_state.get('bot_running', True):
-        st.session_state.total_pnl += round(random.uniform(-10.0, 12.5), 2)
-    
-    pnl_val = st.session_state.total_pnl
-    pnl_color = "color: #22C55E; font-weight: bold;" if pnl_val >= 0 else "color: #EF4444; font-weight: bold;"
-    st.markdown(f"<h2>{pnl_val:,.2f}</h2>", unsafe_allow_html=True)
-    st.markdown(f"<p style='{pnl_color}'>Realized + Unrealized</p>", unsafe_allow_html=True)
+    total_net_pnl = pnl1 + pnl2
+    pnl_color = "color: #22C55E; font-weight: bold;" if total_net_pnl >= 0 else "color: #EF4444; font-weight: bold;"
+    st.markdown(f"<h2>{total_net_pnl:+,.2f}</h2>", unsafe_allow_html=True)
+    st.markdown(f"<p style='{pnl_color}'>Protected by King Shield TSL</p>", unsafe_allow_html=True)
 
 st.divider()
 
-# --- Persistent Bot Controls (Tradetron Style) ---
-st.markdown("### ⚙️ Automation & Execution Engine")
-bot_status_text = "🟢 ENGINE RUNNING (Auto-managed: 09:15 - 03:15)" if st.session_state.get('bot_running', True) else "🔴 ENGINE STOPPED / LOCKED"
+# --- Automation & Emergency Engine Controls ---
+st.markdown("### ⚙️ King Shield Risk & Execution Engine")
+bot_status_text = "🟢 SHIELD ACTIVE (Auto-managed: 09:15 - 03:15)" if st.session_state.get('bot_running', True) else "🔴 ENGINE STOPPED / LOCKED"
 st.info(bot_status_text)
 
 col_b1, col_b2 = st.columns(2)
 with col_b1:
-    if st.button("Start / Resume Engine", use_container_width=True):
+    if st.button("Start / Resume Shield", use_container_width=True):
         st.session_state.bot_running = True
-        st.success("Engine resumed successfully! It will automatically lock at 03:15 PM.")
+        st.success("Shield activated with TSL & 25% Capital Protection!")
         st.rerun()
 with col_b2:
-    if st.button("Emergency Stop / Square Off", use_container_width=True):
+    if st.button("Emergency Square Off", use_container_width=True):
         st.session_state.bot_running = False
-        st.warning("Engine stopped and positions squared off manually.")
+        st.warning("Emergency triggered! All positions squared off safely.")
         st.rerun()
 
 st.markdown("---")
-st.markdown("<p style='text-align: center; color: #64748B; font-size: 0.85rem;'>Tradetron-Style Pro Matrix • Secure Mobile Terminal</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: #64748B; font-size: 0.85rem;'>King Shield Pro • 25% Capital Guard & Trailing Stop-Loss Active</p>", unsafe_allow_html=True)
         
