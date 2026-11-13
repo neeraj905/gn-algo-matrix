@@ -34,4 +34,26 @@ class AngelAPIHandler:
         except Exception as e:
             print(f"Error fetching LTP: {e}")
         return None
-                
+
+    def get_profile(self):
+        try:
+            if not self.smart_api:
+                return None
+            res = self.smart_api.getProfile(self.session_data.get('refreshToken')) if self.session_data else None
+            if res and res.get('status'):
+                return res.get('data')
+        except:
+            pass
+        return None
+
+    def get_funds(self):
+        try:
+            if not self.smart_api:
+                return None
+            res = self.smart_api.rmsLimit()
+            if res and res.get('status'):
+                return res.get('data')
+        except:
+            pass
+        return None
+        
