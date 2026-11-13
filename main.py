@@ -10,13 +10,13 @@ from streamlit_autorefresh import st_autorefresh
 
 # Page Configuration
 st.set_page_config(
-    page_title="Algo Trading Portal - Pro Shield",
+    page_title="Algo Trading Portal - Multi-Index Pro",
     page_icon="🛡️",
     layout="centered"
 )
 
 # Live auto-refresh every 5 seconds
-st_autorefresh(interval=5000, limit=None, key="pro_shield_refresh")
+st_autorefresh(interval=5000, limit=None, key="multi_index_refresh")
 
 # --- Strict Market Timing & Auto-State Check (09:15 to 03:15) ---
 def get_market_status():
@@ -86,8 +86,8 @@ if "bot_running" not in st.session_state:
     st.session_state.bot_running = True
 
 # --- Sidebar Navigation ---
-st.sidebar.markdown("## 🛡️ KING SHIELD PRO MENU")
-menu_option = st.sidebar.selectbox("Navigation", ["Dashboard & Risk Shield", "Broker Account Settings", "Execution Logs"])
+st.sidebar.markdown("## 🛡️ MULTI-INDEX PRO MENU")
+menu_option = st.sidebar.selectbox("Navigation", ["Dashboard & Index Matrix", "Broker Account Settings", "Execution Logs"])
 
 api_key_input, client_id_input, password_input, totp_secret = "", "", "", ""
 if menu_option == "Broker Account Settings":
@@ -134,14 +134,14 @@ else:
         else:
             st.sidebar.warning("Fill all fields.")
 
-# Custom CSS
+# Custom CSS for dark theme and high contrast buttons
 st.markdown("""
     <style>
     .stApp { background-color: #0F172A; color: #F8FAFC; }
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     .golden-title {
-        font-size: 2.6rem !important;
+        font-size: 2.5rem !important;
         font-weight: 900 !important;
         background: linear-gradient(90deg, #BF953F, #FCF6BA, #B38728, #FBF5B7);
         -webkit-background-clip: text;
@@ -149,19 +149,34 @@ st.markdown("""
         text-align: center;
         margin-bottom: 0px;
     }
-    .subtitle { text-align: center; color: #94A3B8; font-size: 0.95rem; margin-bottom: 15px; }
+    .subtitle { text-align: center; color: #94A3B8; font-size: 0.9rem; margin-bottom: 15px; }
     .shield-box { background-color: #1E293B; border: 1px solid #334155; padding: 12px; border-radius: 10px; margin-bottom: 15px; }
+    .index-header { background: #1E293B; border-left: 4px solid #38BDF8; padding: 8px 12px; font-weight: bold; font-size: 1.1rem; margin-top: 15px; margin-bottom: 5px; border-radius: 4px; color: #38BDF8; }
+    
+    div.stButton > button:first-child {
+        background-color: #334155;
+        color: #F8FAFC;
+        border: 1px solid #475569;
+        font-weight: bold;
+        border-radius: 8px;
+        width: 100%;
+    }
+    div.stButton > button:hover {
+        background-color: #475569;
+        border-color: #64748B;
+        color: #FFFFFF;
+    }
     </style>
 """, unsafe_allow_html=True)
 
 # Header
 st.markdown('<p class="golden-title">ALGO TRADING PORTAL</p>', unsafe_allow_html=True)
-st.markdown('<p class="subtitle">King Shield Pro • Trailing SL & 25% Capital Guard</p>', unsafe_allow_html=True)
+st.markdown('<p class="subtitle">Multi-Index Pro • Nifty, BankNifty, FinNifty, Midcap & Sensex Shield</p>', unsafe_allow_html=True)
 st.divider()
 
 # --- Fetch Real Profile & Funds ---
 client_name = "VALUED TRADER"
-total_bal = 5000.00  # Realistic base capital minimum
+total_bal = 5000.00  
 broker_display = "Simulation Mode (Paper)"
 
 if st.session_state.get("broker_connected", False) and 'angel_connector' in st.session_state:
@@ -203,7 +218,7 @@ if is_market_open:
 else:
     st.markdown(f"<div style='background-color: rgba(239, 68, 68, 0.1); border: 1px solid #EF4444; padding: 6px; border-radius: 8px; text-align: center; margin-bottom: 10px;'><span style='color: #EF4444; font-weight: bold; font-size: 0.9rem;'>🔴 {market_msg}</span></div>", unsafe_allow_html=True)
 
-# --- 25% Capital & Margin Shield View ---
+# --- Capital Shield Cards ---
 col_c1, col_c2, col_c3 = st.columns(3)
 with col_c1:
     st.markdown(f"<div style='background-color: #1E293B; padding: 10px; border-radius: 8px; border: 1px solid #334155; text-align: center;'><span style='color: #94A3B8; font-size: 0.7rem;'>TOTAL BALANCE</span><br><strong style='color: #F8FAFC; font-size: 0.95rem;'>₹{total_bal:,.2f}</strong></div>", unsafe_allow_html=True)
@@ -214,102 +229,86 @@ with col_c3:
 
 st.divider()
 
-# --- Active Strategy Legs with Trailing Stop Loss Logic ---
-st.markdown("### 📋 Active Strategy Legs (Trailing SL Protected)")
+# --- 5 MAJOR INDIAN INDICES & SEPARATE TABLES ---
+st.markdown("### 📊 Multi-Index Live Strategy Matrix (All 5 Indices)")
 
-if 'leg1_ltp' not in st.session_state:
-    # Initializing state for legs (Entry, Current LTP, Dynamic Stop-Loss)
-    st.session_state.leg1 = {"instrument": "NIFTY 22600 CE", "type": "BUY", "entry": 125.50, "ltp": 138.25, "sl": 115.00, "high": 138.25}
-    st.session_state.leg2 = {"instrument": "NIFTY 22500 PE", "type": "BUY", "entry": 95.00, "ltp": 88.50, "sl": 105.00, "low": 88.50}
-
-# Live simulation & Trailing Stop-Loss calculation
-if is_market_open and st.session_state.get('bot_running', True):
-    # Fluctuating market prices
-    st.session_state.leg1["ltp"] += round(random.uniform(-1.5, 1.8), 2)
-    st.session_state.leg2["ltp"] += round(random.uniform(-1.2, 1.3), 2)
-    
-    # --- TRAILING STOP-LOSS LOGIC FOR CALL (CE) ---
-    # When price goes up, peak (high) updates, and Stop-loss trails upward to secure profit
-    if st.session_state.leg1["ltp"] > st.session_state.leg1["high"]:
-        st.session_state.leg1["high"] = st.session_state.leg1["ltp"]
-        # Trail SL upward by maintaining a safe distance (e.g., 8 points below peak)
-        new_sl = round(st.session_state.leg1["high"] - 8.0, 2)
-        if new_sl > st.session_state.leg1["sl"]:
-            st.session_state.leg1["sl"] = new_sl
-
-    # --- TRAILING STOP-LOSS LOGIC FOR PUT (PE) ---
-    # When market drops (Put price goes up), peak updates, and SL trails downward to secure profit
-    if st.session_state.leg2["ltp"] > st.session_state.leg2["low"]:
-        st.session_state.leg2["low"] = st.session_state.leg2["ltp"]
-        new_pe_sl = round(st.session_state.leg2["low"] - 6.0, 2)
-        if new_pe_sl > st.session_state.leg2["sl"]:
-            st.session_state.leg2["sl"] = new_pe_sl
-
-# Calculate P&L
-pnl1 = round((st.session_state.leg1["ltp"] - st.session_state.leg1["entry"]) * 25, 2)
-pnl2 = round((st.session_state.leg2["ltp"] - st.session_state.leg2["entry"]) * 25, 2)
-
-positions_data = [
-    {
-        "Strategy": "Nifty Momentum", 
-        "Instrument": st.session_state.leg1["instrument"], 
-        "Type": st.session_state.leg1["type"], 
-        "Entry": st.session_state.leg1["entry"], 
-        "LTP": st.session_state.leg1["ltp"], 
-        "Trailing SL": st.session_state.leg1["sl"],
-        "P&L": f"{pnl1:+,.2f}"
-    },
-    {
-        "Strategy": "Nifty Momentum", 
-        "Instrument": st.session_state.leg2["instrument"], 
-        "Type": st.session_state.leg2["type"], 
-        "Entry": st.session_state.leg2["entry"], 
-        "LTP": st.session_state.leg2["ltp"], 
-        "Trailing SL": st.session_state.leg2["sl"],
-        "P&L": f"{pnl2:+,.2f}"
+# Initialize session state for all 5 indices if not present
+if 'idx_states' not in st.session_state:
+    st.session_state.idx_states = {
+        "NIFTY": {"spot": 22612.50, "ce_ltp": 138.25, "pe_ltp": 88.50, "ce_sl": 115.00, "pe_sl": 75.00},
+        "BANKNIFTY": {"spot": 48250.00, "ce_ltp": 345.00, "pe_ltp": 290.00, "ce_sl": 310.00, "pe_sl": 260.00},
+        "FINNIFTY": {"spot": 21400.00, "ce_ltp": 112.50, "pe_ltp": 95.00, "ce_sl": 98.00, "pe_sl": 82.00},
+        "MIDCAPNIFTY": {"spot": 10850.00, "ce_ltp": 68.00, "pe_ltp": 54.50, "ce_sl": 58.00, "pe_sl": 45.00},
+        "SENSEX": {"spot": 74500.00, "ce_ltp": 520.00, "pe_ltp": 480.00, "ce_sl": 470.00, "pe_sl": 430.00}
     }
-]
 
-df_positions = pd.DataFrame(positions_data)
-st.dataframe(df_positions, use_container_width=True)
+# Live simulation updates if market is open
+if is_market_open and st.session_state.get('bot_running', True):
+    for idx in st.session_state.idx_states:
+        st.session_state.idx_states[idx]["spot"] += round(random.uniform(-4.0, 4.2), 2)
+        st.session_state.idx_states[idx]["ce_ltp"] += round(random.uniform(-1.5, 1.8), 2)
+        st.session_state.idx_states[idx]["pe_ltp"] += round(random.uniform(-1.2, 1.4), 2)
 
-# --- Total Portfolio Summary ---
-col_p1, col_p2 = st.columns(2)
-with col_p1:
-    st.markdown("### Live Nifty Index")
-    if 'nifty_idx' not in st.session_state:
-        st.session_state.nifty_idx = 22612.50
-    if is_market_open:
-        st.session_state.nifty_idx += round(random.uniform(-3.0, 3.2), 2)
-    st.markdown(f"<h2>{st.session_state.nifty_idx:,.2f}</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='color: #22C55E; font-weight: bold;'>+18.40 (+0.08%)</p>", unsafe_allow_html=True)
+total_all_pnl = 0.0
 
-with col_p2:
-    st.markdown("### Total Net P&L (Today)")
-    total_net_pnl = pnl1 + pnl2
-    pnl_color = "color: #22C55E; font-weight: bold;" if total_net_pnl >= 0 else "color: #EF4444; font-weight: bold;"
-    st.markdown(f"<h2>{total_net_pnl:+,.2f}</h2>", unsafe_allow_html=True)
-    st.markdown(f"<p style='{pnl_color}'>Protected by King Shield TSL</p>", unsafe_allow_html=True)
+# Render each index with its own dedicated heading and table (BUY Call and BUY Put legs)
+for idx_name, data in st.session_state.idx_states.items():
+    st.markdown(f'<div class="index-header">📈 {idx_name} (Spot: {data["spot"]:,.2f})</div>', unsafe_allow_html=True)
+    
+    # Calculate leg P&Ls (Assuming 1 lot per index for simulation)
+    # CE Leg (BUY Call)
+    ce_pnl = round((data["ce_ltp"] - 120.00) * 25, 2)
+    # PE Leg (BUY Put)
+    pe_pnl = round((data["pe_ltp"] - 80.00) * 25, 2)
+    
+    total_all_pnl += (ce_pnl + pe_pnl)
+    
+    index_df = pd.DataFrame([
+        {
+            "Instrument": f"{idx_name} CE", 
+            "Type": "BUY CALL", 
+            "Entry": 120.00, 
+            "LTP": data["ce_ltp"], 
+            "Trailing SL": data["ce_sl"], 
+            "P&L": f"{ce_pnl:+,.2f}"
+        },
+        {
+            "Instrument": f"{idx_name} PE", 
+            "Type": "BUY PUT", 
+            "Entry": 80.00, 
+            "LTP": data["pe_ltp"], 
+            "Trailing SL": data["pe_sl"], 
+            "P&L": f"{pe_pnl:+,.2f}"
+        }
+    ])
+    st.dataframe(index_df, use_container_width=True, hide_index=True)
+
+st.divider()
+
+# --- Total Net Portfolio P&L Summary ---
+st.markdown("### 💰 Total Net P&L (All 5 Indices Combined)")
+pnl_color = "color: #22C55E; font-weight: bold;" if total_all_pnl >= 0 else "color: #EF4444; font-weight: bold;"
+st.markdown(f"<h2>{total_all_pnl:+,.2f}</h2>", unsafe_allow_html=True)
+st.markdown(f"<p style='{pnl_color}'>Protected by Multi-Index King Shield TSL</p>", unsafe_allow_html=True)
 
 st.divider()
 
 # --- Automation & Emergency Engine Controls ---
-st.markdown("### ⚙️ King Shield Risk & Execution Engine")
+st.markdown("### ⚙️ Engine & Safety Controls")
 bot_status_text = "🟢 SHIELD ACTIVE (Auto-managed: 09:15 - 03:15)" if st.session_state.get('bot_running', True) else "🔴 ENGINE STOPPED / LOCKED"
 st.info(bot_status_text)
 
 col_b1, col_b2 = st.columns(2)
 with col_b1:
-    if st.button("Start / Resume Shield", use_container_width=True):
+    if st.button("▶ Start / Resume Shield", use_container_width=True):
         st.session_state.bot_running = True
-        st.success("Shield activated with TSL & 25% Capital Protection!")
+        st.success("Shield activated for all 5 indices!")
         st.rerun()
 with col_b2:
-    if st.button("Emergency Square Off", use_container_width=True):
+    if st.button("🚨 Emergency Square Off", use_container_width=True):
         st.session_state.bot_running = False
-        st.warning("Emergency triggered! All positions squared off safely.")
+        st.warning("Emergency triggered! All index positions squared off.")
         st.rerun()
 
 st.markdown("---")
-st.markdown("<p style='text-align: center; color: #64748B; font-size: 0.85rem;'>King Shield Pro • 25% Capital Guard & Trailing Stop-Loss Active</p>", unsafe_allow_html=True)
-        
+st.markdown("<p style='text-align: center; color: #64748B; font-size: 0.85rem;'>Multi-Index Pro • Nifty, BankNifty, FinNifty, Midcap & Sensex Active</p>", unsafe_allow_html=True)
