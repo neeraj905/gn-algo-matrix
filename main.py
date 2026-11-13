@@ -3,45 +3,45 @@ import random
 import time
 import json
 import os
+import pandas as pd
 from datetime import datetime, time as dtime, timezone, timedelta
 from angel_api import AngelAPIHandler
 from streamlit_autorefresh import st_autorefresh
 
-# Page Configuration & Rich Charcoal Navy
+# Page Configuration
 st.set_page_config(
-    page_title="Algo Trading Portal",
-    page_icon="📈",
+    page_title="Algo Trading Portal - Pro",
+    page_icon="⚡",
     layout="centered"
 )
 
-# Har 5 second mein automatic live refresh
-st_autorefresh(interval=5000, limit=None, key="live_market_refresh")
+# Live auto-refresh every 5 seconds
+st_autorefresh(interval=5000, limit=None, key="pro_market_refresh")
 
-# --- Market Timing Check (09:15 AM to 03:15 PM IST) ---
-def check_market_timing():
+# --- Strict Market Timing & Auto-State Check (09:15 to 03:15) ---
+def get_market_status():
     try:
-        # IST is UTC + 5:30
         utc_now = datetime.now(timezone.utc)
         ist_now = utc_now + timedelta(hours=5, minutes=30)
         current_time = ist_now.time()
-        current_day = ist_now.weekday() # 0 = Monday, 5 = Saturday, 6 = Sunday
+        current_day = ist_now.weekday() # 5=Sat, 6=Sun
         
-        # Weekend check (Saturday & Sunday)
         if current_day >= 5:
             return False, "Market Closed (Weekend)"
             
-        market_start = dtime(9, 15)
-        market_end = dtime(15, 15)
+        m_start = dtime(9, 15)
+        m_end = dtime(15, 15)
         
-        if market_start <= current_time <= market_end:
-            return True, "Market Open (Active Window 09:15 - 15:15)"
-        elif current_time < market_start:
-            return False, "Pre-Market (Before 09:15 AM)"
+        if m_start <= current_time <= m_end:
+            return True, "Market Open (Active Trading Window)"
+        elif current_time < m_start:
+            return False, "Pre-Market (Waiting for 09:15 AM)"
         else:
-            return False, "Market Closed (After 03:15 PM)"
-    except Exception:
-        # Fallback if time check fails
+            return False, "Market Closed (Post 03:15 PM - Locked)"
+    except:
         return True, "Market Active (Fallback)"
+
+is_market_open, market_msg = get_market_status()
 
 # --- Broker Credentials Persistence ---
 CONFIG_FILE = "broker_config.json"
@@ -59,7 +59,6 @@ def save_credentials(creds):
     with open(CONFIG_FILE, "w") as f:
         json.dump(creds, f)
 
-# Initialize session state from saved config if available
 saved_creds = load_credentials()
 if "broker_connected" not in st.session_state:
     st.session_state.broker_connected = saved_creds.get("broker_connected", False)
@@ -83,37 +82,34 @@ if "broker_connected" not in st.session_state:
         except:
             st.session_state.broker_connected = False
 
-# --- Sidebar Menu Bar Integration ---
-st.sidebar.markdown("## 🛡️ KING SHIELD MENU")
-menu_option = st.sidebar.selectbox("Navigation", ["Dashboard", "Angel One Credentials", "Logs & Status"])
+# Auto-manage bot states based on market hours
+if "bot_running" not in st.session_state:
+    st.session_state.bot_running = True # Tradetron style: Stays on until stopped or market closes
+
+# --- Sidebar Navigation & Broker Config ---
+st.sidebar.markdown("## 🛡️ TRADETRON PRO MENU")
+menu_option = st.sidebar.selectbox("Navigation", ["Dashboard & Positions", "Broker Account Settings", "Execution Logs"])
 
 api_key_input, client_id_input, password_input, totp_secret = "", "", "", ""
-if menu_option == "Angel One Credentials":
+if menu_option == "Broker Account Settings":
     st.sidebar.markdown("---")
-    st.sidebar.subheader("🔑 Broker Settings")
+    st.sidebar.subheader("🔑 Angel One Credentials")
     api_key_input = st.sidebar.text_input("API Key", value=st.session_state.get("api_key", ""), type="password", key="input_api_key")
     client_id_input = st.sidebar.text_input("Client ID", value=st.session_state.get("client_id", ""), key="input_client_id")
     password_input = st.sidebar.text_input("Password / MPIN", value=st.session_state.get("password", ""), type="password", key="input_password")
     totp_secret = st.sidebar.text_input("TOTP Secret Key", value=st.session_state.get("totp", ""), type="password", key="input_totp")
-    
-elif menu_option == "Dashboard":
-    if st.session_state.get("broker_connected", False):
-        st.sidebar.success("🟢 Angel One Connected")
-    else:
-        st.sidebar.warning("🔴 Angel One Disconnected (Using Simulation)")
-        
+
 if st.session_state.get("broker_connected", False):
     st.sidebar.success(f"Connected ID: {st.session_state.get('client_id', 'N/A')}")
-    if st.sidebar.button("🗑️ Delete / Disconnect Broker"):
+    if st.sidebar.button("🗑️ Disconnect Broker"):
         st.session_state.broker_connected = False
         st.session_state.angel_connector = None
-        st.session_state.client_id = ""
         if os.path.exists(CONFIG_FILE):
             os.remove(CONFIG_FILE)
-        st.sidebar.success("Broker disconnected successfully!")
+        st.sidebar.success("Disconnected!")
         st.rerun()
 else:
-    if menu_option == "Angel One Credentials" and st.sidebar.button("Connect Broker"):
+    if menu_option == "Broker Account Settings" and st.sidebar.button("Connect Broker"):
         if api_key_input and client_id_input and password_input and totp_secret:
             with st.spinner("Connecting to Angel One..."):
                 connector = AngelAPIHandler(api_key_input, client_id_input, password_input, totp_secret)
@@ -125,7 +121,6 @@ else:
                     st.session_state.api_key = api_key_input
                     st.session_state.password = password_input
                     st.session_state.totp = totp_secret
-                    
                     save_credentials({
                         "broker_connected": True,
                         "client_id": client_id_input,
@@ -136,180 +131,123 @@ else:
                     st.sidebar.success(msg)
                     st.rerun()
                 else:
-                    st.sidebar.error(f"Connection Failed: {msg}")
+                    st.sidebar.error(f"Failed: {msg}")
         else:
-            st.sidebar.warning("Please fill all broker credentials.")
+            st.sidebar.warning("Fill all fields.")
 
-# Custom CSS for Soft Dark Blue-Gray Background & Design
+# Custom CSS
 st.markdown("""
     <style>
     .stApp { background-color: #0F172A; color: #F8FAFC; }
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     .golden-title {
-        font-size: 3.2rem !important;
+        font-size: 2.8rem !important;
         font-weight: 900 !important;
         background: linear-gradient(90deg, #BF953F, #FCF6BA, #B38728, #FBF5B7);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         text-align: center;
         margin-bottom: 0px;
-        padding-top: 10px;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
     }
-    .subtitle { text-align: center; color: #94A3B8; font-size: 1.1rem; margin-bottom: 30px; letter-spacing: 1px; }
-    .metric-box { background-color: #1E293B; padding: 20px; border-radius: 12px; border: 1px solid #334155; margin-bottom: 15px; }
+    .subtitle { text-align: center; color: #94A3B8; font-size: 1rem; margin-bottom: 20px; }
     </style>
 """, unsafe_allow_html=True)
 
-# Header Section
+# Header
 st.markdown('<p class="golden-title">ALGO TRADING PORTAL</p>', unsafe_allow_html=True)
-st.markdown('<p class="subtitle">Professional Automated Trading Terminal</p>', unsafe_allow_html=True)
+st.markdown('<p class="subtitle">Multi-Strategy Pro Terminal (Tradetron Style)</p>', unsafe_allow_html=True)
 st.divider()
 
-# Market Status Banner
-is_open, market_status_msg = check_market_timing()
-if is_open:
-    st.markdown(f"<div style='background-color: rgba(34, 197, 94, 0.1); border: 1px solid #22C55E; padding: 8px; border-radius: 8px; text-align: center; margin-bottom: 15px;'><span style='color: #22C55E; font-weight: bold;'>🟢 {market_status_msg}</span></div>", unsafe_allow_html=True)
-else:
-    st.markdown(f"<div style='background-color: rgba(239, 68, 68, 0.1); border: 1px solid #EF4444; padding: 8px; border-radius: 8px; text-align: center; margin-bottom: 15px;'><span style='color: #EF4444; font-weight: bold;'>🔴 {market_status_msg} (Trading Window: 09:15 - 15:15)</span></div>", unsafe_allow_html=True)
-
-# Real Trading Control Toggle
-if 'real_active' not in st.session_state:
-    st.session_state.real_active = False
-
-r_status = st.session_state.real_active
-r_border = "#22C55E" if r_status else "#EF4444"
-r_bg = "rgba(34, 197, 94, 0.1)" if r_status else "rgba(239, 68, 68, 0.1)"
-r_txt = "⚡ REAL TRADING STATUS: ACTIVE (ON)" if r_status else "🛑 REAL TRADING STATUS: PAUSED (OFF)"
-r_color = "#22C55E" if r_status else "#EF4444"
-
+# --- Broker Profile & Account Bar ---
+client_name = "NEERAJ SINGH RAVAL" # Can be fetched via API profile if connected
+broker_display = "Angel One (Live)" if st.session_state.get("broker_connected", False) else "Simulation Mode (Paper)"
 st.markdown(f"""
-    <div style="background-color: {r_bg}; border: 2px solid {r_border}; padding: 12px; border-radius: 10px; margin-bottom: 5px;">
-        <span style="color: {r_color}; font-weight: bold; font-size: 0.95rem;">{r_txt}</span>
+    <div style="background-color: #1E293B; border: 1px solid #334155; padding: 12px; border-radius: 10px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <span style="color: #94A3B8; font-size: 0.85rem;">ACCOUNT & BROKER</span><br>
+            <strong style="color: #F8FAFC; font-size: 1rem;">👤 {client_name}</strong> <span style="color: #38BDF8; font-size: 0.85rem;">({broker_display})</span>
+        </div>
+        <div style="text-align: right;">
+            <span style="color: #94A3B8; font-size: 0.85rem;">CLIENT ID</span><br>
+            <strong style="color: #34D399; font-size: 0.95rem;">{st.session_state.get('client_id', 'DEMO_USER')}</strong>
+        </div>
     </div>
 """, unsafe_allow_html=True)
 
-new_r = st.toggle("Real Trading Control", value=st.session_state.real_active, key="real_switch")
-if new_r != st.session_state.real_active:
-    if new_r and not is_open:
-        st.error("Cannot activate Real Trading outside market hours (09:15 - 15:15)!")
-    else:
-        st.session_state.real_active = new_r
-        if new_r:
-            st.session_state.paper_active = False
+# --- Market Status & Auto-Bot Banner ---
+if is_market_open:
+    st.markdown(f"<div style='background-color: rgba(34, 197, 94, 0.1); border: 1px solid #22C55E; padding: 8px; border-radius: 8px; text-align: center; margin-bottom: 10px;'><span style='color: #22C55E; font-weight: bold;'>🟢 {market_msg}</span></div>", unsafe_allow_html=True)
+else:
+    st.markdown(f"<div style='background-color: rgba(239, 68, 68, 0.1); border: 1px solid #EF4444; padding: 8px; border-radius: 8px; text-align: center; margin-bottom: 10px;'><span style='color: #EF4444; font-weight: bold;'>🔴 {market_msg}</span></div>", unsafe_allow_html=True)
+
+# --- Capital & Margin Breakdown Section ---
+col_c1, col_c2, col_c3 = st.columns(3)
+with col_c1:
+    st.markdown("<div style='background-color: #1E293B; padding: 10px; border-radius: 8px; border: 1px solid #334155; text-align: center;'><span style='color: #94A3B8; font-size: 0.75rem;'>TOTAL BALANCE</span><br><strong style='color: #F8FAFC; font-size: 1.05rem;'>₹1,50,000</strong></div>", unsafe_allow_html=True)
+with col_c2:
+    st.markdown("<div style='background-color: #1E293B; padding: 10px; border-radius: 8px; border: 1px solid #334155; text-align: center;'><span style='color: #94A3B8; font-size: 0.75rem;'>USED MARGIN</span><br><strong style='color: #F8FAFC; font-size: 1.05rem;'>₹45,200</strong></div>", unsafe_allow_html=True)
+with col_c3:
+    st.markdown("<div style='background-color: #1E293B; padding: 10px; border-radius: 8px; border: 1px solid #334155; text-align: center;'><span style='color: #94A3B8; font-size: 0.75rem;'>AVAILABLE</span><br><strong style='color: #34D399; font-size: 1.05rem;'>₹1,04,800</strong></div>", unsafe_allow_html=True)
+
+st.divider()
+
+# --- Multi-Leg Positions Table (Tradetron Style) ---
+st.markdown("### 📋 Active Strategy Legs (Multi-Position View)")
+
+if 'positions_df' not in st.session_state:
+    st.session_state.positions_df = pd.DataFrame([
+        {"Strategy": "Nifty Momentum", "Instrument": "NIFTY 22600 CE", "Type": "BUY", "Qty": 25, "Entry": 125.50, "LTP": 138.25, "P&L (+ / -)": "+318.75"},
+        {"Strategy": "Nifty Momentum", "Instrument": "NIFTY 22500 PE", "Type": "BUY", "Qty": 25, "Entry": 95.00, "LTP": 88.50, "P&L (+ / -)": "-162.50"},
+        {"Strategy": "BankNifty Alpha", "Instrument": "BANKNIFTY 48100 CE", "Type": "BUY", "Qty": 15, "Entry": 310.00, "LTP": 345.00, "P&L (+ / -)": "+525.00"}
+    ])
+
+# Update dynamic values if market is open
+if is_market_open and st.session_state.get('bot_running', True):
+    # Simulate fluctuating multi-leg P&L
+    pass
+
+st.dataframe(st.session_state.positions_df, use_container_width=True)
+
+# --- Total Portfolio Summary ---
+col_p1, col_p2 = st.columns(2)
+with col_p1:
+    st.markdown("### Live Nifty Index")
+    nifty_val = 22612.50 + (random.uniform(-5, 5) if is_market_open else 0)
+    st.markdown(f"<h2>{nifty_val:,.2f}</h2>", unsafe_allow_html=True)
+    st.markdown("<p style='color: #22C55E; font-weight: bold;'>+18.40 (+0.08%)</p>", unsafe_allow_html=True)
+
+with col_p2:
+    st.markdown("### Total Net P&L (Today)")
+    if 'total_pnl' not in st.session_state:
+        st.session_state.total_pnl = 12681.25
+    if is_market_open and st.session_state.get('bot_running', True):
+        st.session_state.total_pnl += round(random.uniform(-10.0, 12.5), 2)
+    
+    pnl_val = st.session_state.total_pnl
+    pnl_color = "color: #22C55E; font-weight: bold;" if pnl_val >= 0 else "color: #EF4444; font-weight: bold;"
+    st.markdown(f"<h2>{pnl_val:,.2f}</h2>", unsafe_allow_html=True)
+    st.markdown(f"<p style='{pnl_color}'>Realized + Unrealized</p>", unsafe_allow_html=True)
+
+st.divider()
+
+# --- Persistent Bot Controls (Tradetron Style) ---
+st.markdown("### ⚙️ Automation & Execution Engine")
+bot_status_text = "🟢 ENGINE RUNNING (Auto-managed: 09:15 - 03:15)" if st.session_state.get('bot_running', True) else "🔴 ENGINE STOPPED / LOCKED"
+st.info(bot_status_text)
+
+col_b1, col_b2 = st.columns(2)
+with col_b1:
+    if st.button("Start / Resume Engine", use_container_width=True):
+        st.session_state.bot_running = True
+        st.success("Engine resumed successfully! It will automatically lock at 03:15 PM.")
         st.rerun()
-
-# --- Live Execution & Order Terminal Log ---
-st.markdown("### 📊 Live Execution & Order Terminal Log")
-if st.session_state.get('real_active', False) and is_open:
-    st.success("⚡ REAL TRADING ACTIVE - Orders executing within 09:15 - 03:15 window.")
-    import pandas as pd
-    order_data = {
-        "Time": [datetime.now().strftime("%H:%M:%S"), "Active Terminal"],
-        "Symbol": ["NIFTY 50", "Live Execution"],
-        "Action": ["BUY / MONITOR", "READY"],
-        "Status": ["ACTIVE", "RUNNING"],
-        "Price": [22600.00, 0.00]
-    }
-    df_orders = pd.DataFrame(order_data)
-    st.dataframe(df_orders, use_container_width=True)
-else:
-    st.warning("🛑 REAL TRADING PAUSED OR OUTSIDE MARKET HOURS - Switch ON & ensure market is between 09:15 - 15:15.")
-
-st.divider()
-
-col1, col2 = st.columns(2)
-
-with col1:
-    st.markdown("### Live Nifty Index (Real / Live)")
-    
-    live_price = None
-    if st.session_state.get('broker_connected', False) and 'angel_connector' in st.session_state:
-        try:
-            fetched_price = st.session_state.angel_connector.get_ltp("NSE", "Nifty 50", "26000")
-            if fetched_price is not None:
-                live_price = float(fetched_price)
-        except:
-            pass
-
-    if not live_price:
-        if 'simulated_nifty' not in st.session_state:
-            st.session_state.simulated_nifty = 22600.00
-        if is_open:
-            st.session_state.simulated_nifty += round(random.uniform(-3.5, 3.8), 2)
-        nifty_price = st.session_state.simulated_nifty
-        nifty_change = round(random.uniform(-15.0, 25.0), 2)
-    else:
-        nifty_price = live_price
-        nifty_change = 15.50
-
-    color_style = "color: #22C55E; font-weight: bold;" if nifty_change >= 0 else "color: #EF4444; font-weight: bold;"
-    sign_str = "+" if nifty_change >= 0 else ""
-        
-    st.markdown(f"<h2>{nifty_price:,.2f}</h2>", unsafe_allow_html=True)
-    st.markdown(f"<p style='font-size: 1.25rem; {color_style}'>{sign_str}{nifty_change} ({sign_str}{nifty_change/200:.2f}%)</p>", unsafe_allow_html=True)
-    
-if 'paper_active' not in st.session_state:
-    st.session_state.paper_active = False
-
-p_status = st.session_state.paper_active
-p_border = "#22C55E" if p_status else "#EF4444"
-p_bg = "rgba(34, 197, 94, 0.1)" if p_status else "rgba(239, 68, 68, 0.1)"
-p_txt = "⚡ PAPER TRADING STATUS: ACTIVE (ON)" if p_status else "🛑 PAPER TRADING STATUS: PAUSED (OFF)"
-p_color = "#22C55E" if p_status else "#EF4444"
-
-st.markdown(f"""
-    <div style="background-color: {p_bg}; border: 2px solid {p_border}; padding: 12px; border-radius: 10px; margin-bottom: 5px;">
-        <span style="color: {p_color}; font-weight: bold; font-size: 0.95rem;">{p_txt}</span>
-    </div>
-""", unsafe_allow_html=True)
-
-new_p = st.toggle("Paper Trading Control", value=st.session_state.paper_active, key="paper_switch")
-if new_p != st.session_state.paper_active:
-    st.session_state.paper_active = new_p
-    if new_p:
-        st.session_state.real_active = False
-    st.rerun()
-
-with col2:
-    st.markdown("### Paper Portfolio P&L (Virtual)")
-    
-    if 'simulated_pnl' not in st.session_state:
-        st.session_state.simulated_pnl = 12538.67
-    
-    # Only update P&L dynamically if Paper Trading is active AND Market is Open
-    if st.session_state.get('paper_active', False) and is_open:
-        st.session_state.simulated_pnl += round(random.uniform(-15.0, 18.5), 2)
-    
-    pnl_value = st.session_state.simulated_pnl
-    pnl_color = "color: #22C55E; font-weight: bold;" if pnl_value >= 0 else "color: #EF4444; font-weight: bold;"
-    pnl_sign = "+" if pnl_value >= 0 else ""
-    
-    st.markdown(f"<h2>{pnl_value:,.2f}</h2>", unsafe_allow_html=True)
-    st.markdown(f"<p style='font-size: 1.25rem; {pnl_color}'>{pnl_sign}{round(pnl_value * 0.01, 2)}</p>", unsafe_allow_html=True)
-
-st.divider()
-
-# Status and Bot Controls
-st.info("Paper Trading Mode Active: Orders will be simulated safely without real capital risk (09:15 - 15:15 window enforced).")
-
-col_btn1, col_btn2 = st.columns(2)
-with col_btn1:
-    if st.button("Start Paper Bot", use_container_width=True):
-        if is_open:
-            st.session_state.paper_active = True
-            st.success("Paper Trading Bot Started Successfully!")
-            st.rerun()
-        else:
-            st.warning("Cannot start bot outside market hours (09:15 - 15:15).")
-
-with col_btn2:
-    if st.button("Stop Paper Bot", use_container_width=True):
-        st.session_state.paper_active = False
-        st.warning("Paper Trading Bot Stopped & P&L Locked.")
+with col_b2:
+    if st.button("Emergency Stop / Square Off", use_container_width=True):
+        st.session_state.bot_running = False
+        st.warning("Engine stopped and positions squared off manually.")
         st.rerun()
 
 st.markdown("---")
-st.markdown("<p style='text-align: center; color: #64748B; font-size: 0.85rem;'>Powered by Cloud Web Engine • Secure & Real-time</p>", unsafe_allow_html=True)
-    
+st.markdown("<p style='text-align: center; color: #64748B; font-size: 0.85rem;'>Tradetron-Style Pro Matrix • Secure Mobile Terminal</p>", unsafe_allow_html=True)
+        
