@@ -134,7 +134,7 @@ else:
         else:
             st.sidebar.warning("Fill all fields.")
 
-# Custom CSS for dark theme and high contrast buttons
+# Custom CSS for dark theme and high contrast styling
 st.markdown("""
     <style>
     .stApp { background-color: #0F172A; color: #F8FAFC; }
@@ -232,7 +232,6 @@ st.divider()
 # --- 5 MAJOR INDIAN INDICES & SEPARATE TABLES ---
 st.markdown("### 📊 Multi-Index Live Strategy Matrix (All 5 Indices)")
 
-# Initialize session state for all 5 indices if not present
 if 'idx_states' not in st.session_state:
     st.session_state.idx_states = {
         "NIFTY": {"spot": 22612.50, "ce_ltp": 138.25, "pe_ltp": 88.50, "ce_sl": 115.00, "pe_sl": 75.00},
@@ -242,7 +241,6 @@ if 'idx_states' not in st.session_state:
         "SENSEX": {"spot": 74500.00, "ce_ltp": 520.00, "pe_ltp": 480.00, "ce_sl": 470.00, "pe_sl": 430.00}
     }
 
-# Live simulation updates if market is open
 if is_market_open and st.session_state.get('bot_running', True):
     for idx in st.session_state.idx_states:
         st.session_state.idx_states[idx]["spot"] += round(random.uniform(-4.0, 4.2), 2)
@@ -251,17 +249,16 @@ if is_market_open and st.session_state.get('bot_running', True):
 
 total_all_pnl = 0.0
 
-# Render each index with its own dedicated heading and table (BUY Call and BUY Put legs)
+# Render each index with dedicated table and color-coded P&L
 for idx_name, data in st.session_state.idx_states.items():
     st.markdown(f'<div class="index-header">📈 {idx_name} (Spot: {data["spot"]:,.2f})</div>', unsafe_allow_html=True)
     
-    # Calculate leg P&Ls (Assuming 1 lot per index for simulation)
-    # CE Leg (BUY Call)
     ce_pnl = round((data["ce_ltp"] - 120.00) * 25, 2)
-    # PE Leg (BUY Put)
     pe_pnl = round((data["pe_ltp"] - 80.00) * 25, 2)
-    
     total_all_pnl += (ce_pnl + pe_pnl)
+    
+    ce_str = f"🟢 +{ce_pnl:,.2f}" if ce_pnl >= 0 else f"🔴 {ce_pnl:,.2f}"
+    pe_str = f"🟢 +{pe_pnl:,.2f}" if pe_pnl >= 0 else f"🔴 {pe_pnl:,.2f}"
     
     index_df = pd.DataFrame([
         {
@@ -270,7 +267,7 @@ for idx_name, data in st.session_state.idx_states.items():
             "Entry": 120.00, 
             "LTP": data["ce_ltp"], 
             "Trailing SL": data["ce_sl"], 
-            "P&L": f"{ce_pnl:+,.2f}"
+            "P&L": ce_str
         },
         {
             "Instrument": f"{idx_name} PE", 
@@ -278,18 +275,20 @@ for idx_name, data in st.session_state.idx_states.items():
             "Entry": 80.00, 
             "LTP": data["pe_ltp"], 
             "Trailing SL": data["pe_sl"], 
-            "P&L": f"{pe_pnl:+,.2f}"
+            "P&L": pe_str
         }
     ])
     st.dataframe(index_df, use_container_width=True, hide_index=True)
 
 st.divider()
 
-# --- Total Net Portfolio P&L Summary ---
+# --- Total Net Portfolio P&L Summary (Placed right after tables) ---
 st.markdown("### 💰 Total Net P&L (All 5 Indices Combined)")
-pnl_color = "color: #22C55E; font-weight: bold;" if total_all_pnl >= 0 else "color: #EF4444; font-weight: bold;"
-st.markdown(f"<h2>{total_all_pnl:+,.2f}</h2>", unsafe_allow_html=True)
-st.markdown(f"<p style='{pnl_color}'>Protected by Multi-Index King Shield TSL</p>", unsafe_allow_html=True)
+net_pnl_str = f"🟢 +{total_all_pnl:,.2f}" if total_all_pnl >= 0 else f"🔴 {total_all_pnl:,.2f}"
+pnl_header_color = "#22C55E" if total_all_pnl >= 0 else "#EF4444"
+
+st.markdown(f"<h2 style='color: {pnl_header_color};'>{net_pnl_str}</h2>", unsafe_allow_html=True)
+st.markdown("<p style='color: #94A3B8;'>Protected by Multi-Index King Shield TSL</p>", unsafe_allow_html=True)
 
 st.divider()
 
