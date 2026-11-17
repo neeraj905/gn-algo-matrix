@@ -1,3 +1,6 @@
+# ==============================================================================
+# SECTION 1: IMPORTS & PAGE CONFIGURATION
+# ==============================================================================
 import streamlit as st
 import random
 import time
@@ -8,21 +11,23 @@ from datetime import datetime, time as dtime, timezone, timedelta
 from angel_api import AngelAPIHandler
 from streamlit_autorefresh import st_autorefresh
 
-# --- Page Configuration ---
 st.set_page_config(
     page_title="Algo Trading Portal - Multi-Index Pro",
     page_icon="🛡️",
     layout="centered"
 )
 
-# --- Custom CSS for Bold Numbers and Dynamic P&L Colors ---
+
+# ==============================================================================
+# SECTION 2: CUSTOM UI STYLING (BOLD NUMBERS & COLORS)
+# ==============================================================================
 st.markdown("""
 <style>
     .stApp { background-color: #0b0f19; color: #f8fafc; }
     .metric-card { background: #1e293b; padding: 15px; border-radius: 12px; border: 1px solid #334155; margin-bottom: 10px; }
     .profit-text { color: #22c55e !important; font-weight: bold; font-size: 1.2rem; }
     .loss-text { color: #ef4444 !important; font-weight: bold; font-size: 1.2rem; }
-    /* Tables ke andar ke saare numbers gehre (bold) karne ke liye */
+    /* Tables ke andar ke saare numbers gehre (bold) aur clear dikhne ke liye */
     table tbody tr td { font-weight: bold !important; color: #f8fafc !important; }
     table thead tr th { font-weight: bold !important; color: #94A3B8 !important; }
 </style>
@@ -31,7 +36,10 @@ st.markdown("""
 # Live auto-refresh every 5 seconds
 st_autorefresh(interval=5000, limit=None, key="multi_index_refresh")
 
-# --- Strict Market Timing & Auto-State Check (09:15 to 15:15) ---
+
+# ==============================================================================
+# SECTION 3: STRICT MARKET TIMING & STATE MANAGEMENT
+# ==============================================================================
 def get_market_status():
     try:
         utc_now = datetime.now(timezone.utc)
@@ -56,7 +64,7 @@ def get_market_status():
 
 is_market_open, market_msg = get_market_status()
 
-# --- Session State Initialization (Refresh Safe & Persistent) ---
+# Session State Initialization (Refresh Safe)
 if "broker_connected" not in st.session_state:
     st.session_state.broker_connected = False
     st.session_state.client_id = ""
@@ -69,7 +77,10 @@ if "broker_connected" not in st.session_state:
 if "bot_running" not in st.session_state:
     st.session_state.bot_running = True
 
-# --- Sidebar Navigation & Broker Settings ---
+
+# ==============================================================================
+# SECTION 4: SIDEBAR NAVIGATION & BROKER SETTINGS
+# ==============================================================================
 st.sidebar.markdown("## 🛡️ MULTI-INDEX PRO MENU")
 menu_option = st.sidebar.selectbox("Navigation", ["Dashboard & Index Matrix", "Broker Account Settings", "Execution Logs"])
 
@@ -105,7 +116,6 @@ else:
                         st.session_state.client_id = client_id_input
                         st.session_state.api_key = api_key_input
                         
-                        # Fetch profile name
                         try:
                             profile = connector.get_profile()
                             if profile and 'clientname' in profile:
@@ -124,12 +134,14 @@ else:
         else:
             st.sidebar.warning("Please fill in all broker credentials.")
 
-# --- Main Dashboard Header ---
+
+# ==============================================================================
+# SECTION 5: MAIN HEADER & USER STATUS
+# ==============================================================================
 st.markdown("<h1 style='text-align: center; color: #f59e0b;'>ALGO TRADING PORTAL</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align: center; color: #94A3B8;'>Multi-Index Pro • Nifty, BankNifty, FinNifty, Midcap & Sensex Shield</p>", unsafe_allow_html=True)
 st.markdown("---")
 
-# --- User & Broker Status Section ---
 display_name = st.session_state.get('client_name', 'NEERAJ SINGH RAVAL')
 client_id_show = st.session_state.get('client_id', 'DEMO_USER') if st.session_state.broker_connected else 'DEMO_USER'
 mode_text = 'Live Broker Connected' if st.session_state.broker_connected else 'Simulation Mode (Paper)'
@@ -142,7 +154,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# --- Market Status Box ---
+# Market Status Box
 status_color = "#22c55e" if is_market_open else "#ef4444"
 st.markdown(f"""
 <div style='background: #1e293b; padding: 10px; border-radius: 8px; border: 1px solid {status_color}; text-align: center; margin-bottom: 15px;'>
@@ -151,7 +163,10 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# --- Capital & Risk Allocation ---
+
+# ==============================================================================
+# SECTION 6: CAPITAL & RISK ALLOCATION CARDS
+# ==============================================================================
 total_balance = 5000.00
 risk_cap = total_balance * 0.25
 safe_reserve = total_balance * 0.75
@@ -173,10 +188,12 @@ st.markdown(f"""
 
 st.markdown("---")
 
-# --- Multi-Index Live Strategy Matrix (Bold & Dynamic TSL Logic) ---
+
+# ==============================================================================
+# SECTION 7: MULTI-INDEX STRATEGY MATRIX & DYNAMIC TSL LOGIC
+# ==============================================================================
 st.markdown("### 📊 Multi-Index Live Strategy Matrix (All 5 Indices)")
 
-# Market ke movement ke mutabiq live variation
 price_tick = random.uniform(-1.5, 2.5) if st.session_state.get('bot_running', True) else 0.0
 
 indices_matrix = {
@@ -187,10 +204,10 @@ indices_matrix = {
     "SENSEX": {"spot": 74500.00 + (price_tick * 3), "ce_entry": 120.0, "ce_ltp": 523.38 + (price_tick * 2), "pe_entry": 80.0, "pe_ltp": 476.74 - (price_tick * 2), "pnl": 27962.75 + (price_tick * 90)}
 }
 
-total_net_pnl = 0.0
+total_combined_pnl = 0.0
 
 for idx_key, val in indices_matrix.items():
-    # Tagda TSL logic: Jaise-jaise LTP entry se upar badhega, Stop Loss bhi upar shift hota jayega
+    # Tagda TSL logic: Value badhne par TSL automatically upar shift hoga
     ce_tsl = max(115.0, val["ce_entry"] - 5.0 + (val["ce_ltp"] - val["ce_entry"]) * 0.6) if val["ce_ltp"] > val["ce_entry"] else 115.0
     pe_tsl = max(75.0, val["pe_entry"] - 5.0 + (val["pe_ltp"] - val["pe_entry"]) * 0.6) if val["pe_ltp"] > val["pe_entry"] else 75.0
 
@@ -214,12 +231,14 @@ for idx_key, val in indices_matrix.items():
     ])
     
     st.dataframe(df_index, use_container_width=True, hide_index=True)
-    total_net_pnl += val["pnl"]
-    
+    total_combined_pnl += val["pnl"]
 
 st.markdown("---")
 
-# --- Total Net P&L Section (Placed prominently right below tables) ---
+
+# ==============================================================================
+# SECTION 8: TOTAL NET P&L DISPLAY
+# ==============================================================================
 st.markdown("### 💰 Total Net P&L (All 5 Indices Combined)")
 pnl_class = "profit-text" if total_combined_pnl >= 0 else "loss-text"
 pnl_sign = "+" if total_combined_pnl >= 0 else ""
@@ -233,7 +252,10 @@ st.markdown(f"""
 
 st.markdown("---")
 
-# --- Engine & Safety Controls ---
+
+# ==============================================================================
+# SECTION 9: ENGINE & SAFETY CONTROLS (SHIELD & EMERGENCY)
+# ==============================================================================
 st.markdown("### ⚙️ Engine & Safety Controls")
 shield_bg = "#14532d" if st.session_state.bot_running else "#7f1d1d"
 shield_text = "🟢 SHIELD ACTIVE (Auto-managed: 09:15 - 15:15)" if st.session_state.bot_running else "🔴 SHIELD STOPPED"
