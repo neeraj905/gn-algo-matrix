@@ -8,27 +8,28 @@ from datetime import datetime, time as dtime, timezone, timedelta
 from angel_api import AngelAPIHandler
 from streamlit_autorefresh import st_autorefresh
 
-# Page Configuration
+# --- Page Configuration ---
 st.set_page_config(
     page_title="Algo Trading Portal - Multi-Index Pro",
     page_icon="🛡️",
     layout="centered"
 )
 
-# Custom Dark Theme & Dynamic P&L Styling
+# --- Custom Dark Theme & Bold UI Styling ---
 st.markdown("""
 <style>
     .stApp { background-color: #0b0f19; color: #f8fafc; }
     .metric-card { background: #1e293b; padding: 15px; border-radius: 12px; border: 1px solid #334155; margin-bottom: 10px; }
     .profit-text { color: #22c55e !important; font-weight: bold; }
     .loss-text { color: #ef4444 !important; font-weight: bold; }
+    table { font-weight: bold !important; }
 </style>
 """, unsafe_allow_html=True)
 
 # Live auto-refresh every 5 seconds
 st_autorefresh(interval=5000, limit=None, key="multi_index_refresh")
 
-# --- Strict Market Timing & Auto-State Check (09:15 to 03:15) ---
+# --- Strict Market Timing & Auto-State Check (09:15 to 15:15) ---
 def get_market_status():
     try:
         utc_now = datetime.now(timezone.utc)
@@ -53,7 +54,7 @@ def get_market_status():
 
 is_market_open, market_msg = get_market_status()
 
-# --- Strict Device Isolation & Clean State Management ---
+# --- Session State Initialization (Refresh Safe & Persistent) ---
 if "broker_connected" not in st.session_state:
     st.session_state.broker_connected = False
     st.session_state.client_id = ""
@@ -61,11 +62,12 @@ if "broker_connected" not in st.session_state:
     st.session_state.password = ""
     st.session_state.totp = ""
     st.session_state.angel_connector = None
+    st.session_state.client_name = "NEERAJ SINGH RAVAL"
 
 if "bot_running" not in st.session_state:
     st.session_state.bot_running = True
 
-# --- Sidebar Navigation ---
+# --- Sidebar Navigation & Broker Settings ---
 st.sidebar.markdown("## 🛡️ MULTI-INDEX PRO MENU")
 menu_option = st.sidebar.selectbox("Navigation", ["Dashboard & Index Matrix", "Broker Account Settings", "Execution Logs"])
 
@@ -85,9 +87,7 @@ if st.session_state.get("broker_connected", False):
         st.session_state.broker_connected = False
         st.session_state.angel_connector = None
         st.session_state.client_id = ""
-        st.session_state.api_key = ""
-        st.session_state.password = ""
-        st.session_state.totp = ""
+        st.session_state.client_name = "NEERAJ SINGH RAVAL"
         st.sidebar.success("Disconnected successfully!")
         st.rerun()
 else:
@@ -102,6 +102,17 @@ else:
                         st.session_state.angel_connector = connector
                         st.session_state.client_id = client_id_input
                         st.session_state.api_key = api_key_input
+                        
+                        # Fetch profile name
+                        try:
+                            profile = connector.get_profile()
+                            if profile and 'clientname' in profile:
+                                st.session_state.client_name = profile['clientname']
+                            else:
+                                st.session_state.client_name = client_id_input
+                        except:
+                            st.session_state.client_name = client_id_input
+                            
                         st.sidebar.success("Broker Connected Successfully!")
                         st.rerun()
                     else:
@@ -111,21 +122,25 @@ else:
         else:
             st.sidebar.warning("Please fill in all broker credentials.")
 
-# --- Main Dashboard UI ---
+# --- Main Dashboard Header ---
 st.markdown("<h1 style='text-align: center; color: #f59e0b;'>ALGO TRADING PORTAL</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align: center; color: #94A3B8;'>Multi-Index Pro • Nifty, BankNifty, FinNifty, Midcap & Sensex Shield</p>", unsafe_allow_html=True)
 st.markdown("---")
 
-# User & Broker Status Section
+# --- User & Broker Status Section ---
+display_name = st.session_state.get('client_name', 'NEERAJ SINGH RAVAL')
+client_id_show = st.session_state.get('client_id', 'DEMO_USER') if st.session_state.broker_connected else 'DEMO_USER'
+mode_text = 'Live Broker Connected' if st.session_state.broker_connected else 'Simulation Mode (Paper)'
+
 st.markdown(f"""
 <div class='metric-card'>
     <b>USER & BROKER</b><br>
-    👤 {st.session_state.get('client_id', 'NEERAJ SINGH RAVAL')} ({'Live Broker Connected' if st.session_state.broker_connected else 'Simulation Mode (Paper)'})<br>
-    <span style='color: #22c55e;'>CLIENT ID: {st.session_state.get('client_id', 'DEMO_USER')}</span>
+    👤 <b>{display_name}</b> ({mode_text})<br>
+    <span style='color: #22c55e;'><b>CLIENT ID: {client_id_show}</b></span>
 </div>
 """, unsafe_allow_html=True)
 
-# Market Status Box
+# --- Market Status Box ---
 status_color = "#22c55e" if is_market_open else "#ef4444"
 st.markdown(f"""
 <div style='background: #1e293b; padding: 10px; border-radius: 8px; border: 1px solid {status_color}; text-align: center; margin-bottom: 15px;'>
@@ -134,7 +149,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# Capital & Risk Allocation
+# --- Capital & Risk Allocation ---
 total_balance = 5000.00
 risk_cap = total_balance * 0.25
 safe_reserve = total_balance * 0.75
@@ -145,7 +160,7 @@ st.markdown(f"""
     <div style='text-align: center; font-size: 1.5rem; font-weight: bold;'>₹{total_balance:,.2f}</div>
 </div>
 <div class='metric-card'>
-    <div style='text-align: center; color: #94A3B8; font-size: 0.85rem;'>25% RISK CAP</div>
+    <div style='text-align: center; color: #94A3B8; font-size: 0.85rem;'>25% RISK CAP (Protected by Shield)</div>
     <div style='text-align: center; font-size: 1.3rem; font-weight: bold; color: #f59e0b;'>₹{risk_cap:,.2f}</div>
 </div>
 <div class='metric-card'>
@@ -156,10 +171,9 @@ st.markdown(f"""
 
 st.markdown("---")
 
-# --- Multi-Index Live Strategy Matrix ---
+# --- Multi-Index Live Strategy Matrix (Bold Numbers & Dynamic TSL Logic) ---
 st.markdown("### 📊 Multi-Index Live Strategy Matrix (All 5 Indices)")
 
-# Sample data generation for tables with dynamic P&L simulation
 indices_data = {
     "NIFTY": {"spot": 22612.50, "ce_ltp": 138.25, "pe_ltp": 88.50, "pnl": 1250.00},
     "BANKNIFTY": {"spot": 48250.00, "ce_ltp": 345.00, "pe_ltp": 290.00, "pnl": -450.00},
@@ -197,9 +211,12 @@ st.markdown("---")
 
 # --- Engine & Safety Controls ---
 st.markdown("### ⚙️ Engine & Safety Controls")
-st.markdown("""
-<div class='metric-card' style='background: #14532d; border-color: #22c55e;'>
-    🟢 SHIELD ACTIVE (Auto-managed: 09:15 - 15:15)
+shield_bg = "#14532d" if st.session_state.bot_running else "#7f1d1d"
+shield_text = "🟢 SHIELD ACTIVE (Auto-managed: 09:15 - 15:15)" if st.session_state.bot_running else "🔴 SHIELD STOPPED"
+
+st.markdown(f"""
+<div class='metric-card' style='background: {shield_bg}; border-color: #22c55e; text-align: center;'>
+    <b>{shield_text}</b>
 </div>
 """, unsafe_allow_html=True)
 
@@ -208,8 +225,9 @@ with col1:
     if st.button("▶ Start / Resume Shield", use_container_width=True):
         st.session_state.bot_running = True
         st.success("Shield Resumed Successfully!")
+        st.rerun()
 with col2:
     if st.button("🚨 Emergency Square Off", use_container_width=True, type="primary"):
         st.session_state.bot_running = False
         st.error("EMERGENCY SQUARE OFF TRIGGERED! All positions closed.")
-            
+        st.rerun()
