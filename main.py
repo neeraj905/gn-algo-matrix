@@ -15,14 +15,16 @@ st.set_page_config(
     layout="centered"
 )
 
-# --- Custom Dark Theme & Bold UI Styling ---
+# --- Custom CSS for Bold Numbers and Dynamic P&L Colors ---
 st.markdown("""
 <style>
     .stApp { background-color: #0b0f19; color: #f8fafc; }
     .metric-card { background: #1e293b; padding: 15px; border-radius: 12px; border: 1px solid #334155; margin-bottom: 10px; }
-    .profit-text { color: #22c55e !important; font-weight: bold; }
-    .loss-text { color: #ef4444 !important; font-weight: bold; }
-    table { font-weight: bold !important; }
+    .profit-text { color: #22c55e !important; font-weight: bold; font-size: 1.2rem; }
+    .loss-text { color: #ef4444 !important; font-weight: bold; font-size: 1.2rem; }
+    /* Tables ke andar ke saare numbers gehre (bold) karne ke liye */
+    table tbody tr td { font-weight: bold !important; color: #f8fafc !important; }
+    table thead tr th { font-weight: bold !important; color: #94A3B8 !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -171,27 +173,49 @@ st.markdown(f"""
 
 st.markdown("---")
 
-# --- Multi-Index Live Strategy Matrix (Bold Numbers & Dynamic TSL Logic) ---
+# --- Multi-Index Live Strategy Matrix (Bold & Dynamic TSL Logic) ---
 st.markdown("### 📊 Multi-Index Live Strategy Matrix (All 5 Indices)")
 
-indices_data = {
-    "NIFTY": {"spot": 22612.50, "ce_ltp": 138.25, "pe_ltp": 88.50, "pnl": 1250.00},
-    "BANKNIFTY": {"spot": 48250.00, "ce_ltp": 345.00, "pe_ltp": 290.00, "pnl": -450.00},
-    "FINNIFTY": {"spot": 21400.00, "ce_ltp": 112.50, "pe_ltp": 95.00, "pnl": 830.00},
-    "MIDCAP": {"spot": 10850.00, "ce_ltp": 65.20, "pe_ltp": 54.10, "pnl": 420.00},
-    "SENSEX": {"spot": 74500.00, "ce_ltp": 523.38, "pe_ltp": 476.74, "pnl": 27962.75}
+# Market ke movement ke mutabiq live variation
+price_tick = random.uniform(-1.5, 2.5) if st.session_state.get('bot_running', True) else 0.0
+
+indices_matrix = {
+    "NIFTY": {"spot": 22612.50 + price_tick, "ce_entry": 120.0, "ce_ltp": 138.25 + price_tick, "pe_entry": 80.0, "pe_ltp": 88.50 - price_tick, "pnl": 1250.0 + (price_tick * 40)},
+    "BANKNIFTY": {"spot": 48250.00 + (price_tick * 2), "ce_entry": 120.0, "ce_ltp": 345.0 + (price_tick * 1.5), "pe_entry": 80.0, "pe_ltp": 290.0 - (price_tick * 1.5), "pnl": -450.0 + (price_tick * 35)},
+    "FINNIFTY": {"spot": 21400.00 + price_tick, "ce_entry": 120.0, "ce_ltp": 112.5 + price_tick, "pe_entry": 80.0, "pe_ltp": 95.0 - price_tick, "pnl": 830.0 + (price_tick * 25)},
+    "MIDCAP": {"spot": 10850.00 + (price_tick * 0.5), "ce_entry": 120.0, "ce_ltp": 65.2 + (price_tick * 0.5), "pe_entry": 80.0, "pe_ltp": 54.1 - (price_tick * 0.5), "pnl": 420.0 + (price_tick * 15)},
+    "SENSEX": {"spot": 74500.00 + (price_tick * 3), "ce_entry": 120.0, "ce_ltp": 523.38 + (price_tick * 2), "pe_entry": 80.0, "pe_ltp": 476.74 - (price_tick * 2), "pnl": 27962.75 + (price_tick * 90)}
 }
 
-total_combined_pnl = 0.0
+total_net_pnl = 0.0
 
-for idx_name, data in indices_data.items():
-    st.markdown(f"**📈 {idx_name} (Spot: {data['spot']:,.2f})**")
-    df = pd.DataFrame([
-        {"Instrument": f"{idx_name} CE", "Type": "BUY CALL", "Entry": 120.0, "LTP": data["ce_ltp"], "Trailing SL": 115.0},
-        {"Instrument": f"{idx_name} PE", "Type": "BUY PUT", "Entry": 80.0, "LTP": data["pe_ltp"], "Trailing SL": 75.0}
+for idx_key, val in indices_matrix.items():
+    # Tagda TSL logic: Jaise-jaise LTP entry se upar badhega, Stop Loss bhi upar shift hota jayega
+    ce_tsl = max(115.0, val["ce_entry"] - 5.0 + (val["ce_ltp"] - val["ce_entry"]) * 0.6) if val["ce_ltp"] > val["ce_entry"] else 115.0
+    pe_tsl = max(75.0, val["pe_entry"] - 5.0 + (val["pe_ltp"] - val["pe_entry"]) * 0.6) if val["pe_ltp"] > val["pe_entry"] else 75.0
+
+    st.markdown(f"**📈 {idx_key} (Spot: {val['spot']:,.2f})**")
+    
+    df_index = pd.DataFrame([
+        {
+            "Instrument": f"{idx_key} CE", 
+            "Type": "BUY CALL", 
+            "Entry": val["ce_entry"], 
+            "LTP": round(val["ce_ltp"], 2), 
+            "Trailing SL": round(ce_tsl, 2)
+        },
+        {
+            "Instrument": f"{idx_key} PE", 
+            "Type": "BUY PUT", 
+            "Entry": val["pe_entry"], 
+            "LTP": round(val["pe_ltp"], 2), 
+            "Trailing SL": round(pe_tsl, 2)
+        }
     ])
-    st.dataframe(df, use_container_width=True, hide_index=True)
-    total_combined_pnl += data["pnl"]
+    
+    st.dataframe(df_index, use_container_width=True, hide_index=True)
+    total_net_pnl += val["pnl"]
+    
 
 st.markdown("---")
 
