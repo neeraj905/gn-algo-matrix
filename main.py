@@ -189,12 +189,15 @@ st.markdown(f"""
 st.markdown("---")
 
 
-# --- Multi-Index Live Strategy Matrix (Fully Fixed Dictionary & Loop) ---
+# ==============================================================================
+# SECTION 7: MULTI-INDEX STRATEGY MATRIX (GREEN/RED LTP & ORANGE TSL)
+# ==============================================================================
 st.markdown("### 📊 Multi-Index Live Strategy Matrix (All 5 Indices)")
 
+# Random price tick for live simulation movement
 price_tick = random.uniform(-1.5, 2.5) if st.session_state.get('bot_running', True) else 0.0
 
-# 1. Sabse pehle dictionary define ki gayi hai
+# 5 Indices master data structure definition
 indices_matrix = {
     "NIFTY": {"spot": 22612.50 + price_tick, "ce_entry": 120.0, "ce_ltp": 138.25 + price_tick, "pe_entry": 80.0, "pe_ltp": 88.50 - price_tick, "pnl": 1250.0 + (price_tick * 40)},
     "BANKNIFTY": {"spot": 48250.00 + (price_tick * 2), "ce_entry": 120.0, "ce_ltp": 345.0 + (price_tick * 1.5), "pe_entry": 80.0, "pe_ltp": 290.0 - (price_tick * 1.5), "pnl": -450.0 + (price_tick * 35)},
@@ -205,16 +208,19 @@ indices_matrix = {
 
 total_combined_pnl = 0.0
 
-# 2. Phir loop chalaya gaya hai jismein boundaries aur green/red colors dono active hain
+# Loop through all 5 indices to render individual styled tables
 for idx_key, val in indices_matrix.items():
+    # Trailing Stop Loss dynamic calculation logic
     ce_tsl = max(115.0, val["ce_entry"] - 5.0 + (val["ce_ltp"] - val["ce_entry"]) * 0.6) if val["ce_ltp"] > val["ce_entry"] else 115.0
     pe_tsl = max(75.0, val["pe_entry"] - 5.0 + (val["pe_ltp"] - val["pe_entry"]) * 0.6) if val["pe_ltp"] > val["pe_entry"] else 75.0
 
-    ce_color = '#22c55e !important;' if val['ce_ltp'] >= val['ce_entry'] else '#ef4444 !important;'
-    pe_color = '#22c55e !important;' if val['pe_ltp'] >= val['pe_entry'] else '#ef4444 !important;'
+    # Color decision: Green if LTP >= Entry, Red if LTP < Entry
+    ce_ltp_color = '#22c55e' if val['ce_ltp'] >= val['ce_entry'] else '#ef4444'
+    pe_ltp_color = '#22c55e' if val['pe_ltp'] >= val['pe_entry'] else '#ef4444'
 
     st.markdown(f"**📈 {idx_key} (Spot: {val['spot']:,.2f})**")
 
+    # Render HTML grid-bordered table with bold text and forced colors
     st.markdown(f"""
     <div style='background: #1e293b; padding: 10px; border-radius: 10px; border: 2px solid #475569; margin-bottom: 15px;'>
         <table style='width: 100%; text-align: left; color: #f8fafc; font-size: 0.9rem; border-collapse: collapse;'>
@@ -232,14 +238,14 @@ for idx_key, val in indices_matrix.items():
                     <td style='padding: 8px; border: 1px solid #475569; font-weight: bold;'>{idx_key} CE</td>
                     <td style='padding: 8px; border: 1px solid #475569; font-weight: bold;'>BUY CALL</td>
                     <td style='padding: 8px; border: 1px solid #475569; font-weight: bold;'>{val['ce_entry']:.2f}</td>
-                    <td style='padding: 8px; border: 1px solid #475569; font-weight: bold; color: {ce_color};'>{val['ce_ltp']:.2f}</td>
+                    <td style='padding: 8px; border: 1px solid #475569; font-weight: bold; color: {ce_ltp_color} !important;'>{val['ce_ltp']:.2f}</td>
                     <td style='padding: 8px; border: 1px solid #475569; font-weight: bold; color: #f59e0b;'>{ce_tsl:.2f}</td>
                 </tr>
                 <tr>
                     <td style='padding: 8px; border: 1px solid #475569; font-weight: bold;'>{idx_key} PE</td>
                     <td style='padding: 8px; border: 1px solid #475569; font-weight: bold;'>BUY PUT</td>
                     <td style='padding: 8px; border: 1px solid #475569; font-weight: bold;'>{val['pe_entry']:.2f}</td>
-                    <td style='padding: 8px; border: 1px solid #475569; font-weight: bold; color: {pe_color};'>{val['pe_ltp']:.2f}</td>
+                    <td style='padding: 8px; border: 1px solid #475569; font-weight: bold; color: {pe_ltp_color} !important;'>{val['pe_ltp']:.2f}</td>
                     <td style='padding: 8px; border: 1px solid #475569; font-weight: bold; color: #f59e0b;'>{pe_tsl:.2f}</td>
                 </tr>
             </tbody>
