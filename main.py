@@ -28,7 +28,7 @@ st.markdown("""
     .profit-text { color: #22c55e !important; font-weight: bold; font-size: 1.2rem; }
     .loss-text { color: #ef4444 !important; font-weight: bold; font-size: 1.2rem; }
     /* Tables ke andar ke saare numbers gehre (bold) aur clear dikhne ke liye */
-    table tbody tr td { font-weight: bold !important; color: #f8fafc !important; }
+    table tbody tr td { font-weight: bold !important; }
     table thead tr th { font-weight: bold !important; color: #94A3B8 !important; }
 </style>
 """, unsafe_allow_html=True)
