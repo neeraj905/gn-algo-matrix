@@ -190,7 +190,7 @@ st.markdown("---")
 
 
 # ==============================================================================
-# SECTION 7: MULTI-INDEX STRATEGY MATRIX & DYNAMIC TSL LOGIC
+# SECTION 7: MULTI-INDEX STRATEGY MATRIX (HTML TABLE FOR BOLD & COLORS)
 # ==============================================================================
 st.markdown("### 📊 Multi-Index Live Strategy Matrix (All 5 Indices)")
 
@@ -207,33 +207,48 @@ indices_matrix = {
 total_combined_pnl = 0.0
 
 for idx_key, val in indices_matrix.items():
-    # Tagda TSL logic: Value badhne par TSL automatically upar shift hoga
     ce_tsl = max(115.0, val["ce_entry"] - 5.0 + (val["ce_ltp"] - val["ce_entry"]) * 0.6) if val["ce_ltp"] > val["ce_entry"] else 115.0
     pe_tsl = max(75.0, val["pe_entry"] - 5.0 + (val["pe_ltp"] - val["pe_entry"]) * 0.6) if val["pe_ltp"] > val["pe_entry"] else 75.0
 
-    st.markdown(f"**📈 {idx_key} (Spot: {val['spot']:,.2f})**")
-    
-    df_index = pd.DataFrame([
-        {
-            "Instrument": f"{idx_key} CE", 
-            "Type": "BUY CALL", 
-            "Entry": val["ce_entry"], 
-            "LTP": round(val["ce_ltp"], 2), 
-            "Trailing SL": round(ce_tsl, 2)
-        },
-        {
-            "Instrument": f"{idx_key} PE", 
-            "Type": "BUY PUT", 
-            "Entry": val["pe_entry"], 
-            "LTP": round(val["pe_ltp"], 2), 
-            "Trailing SL": round(pe_tsl, 2)
-        }
-    ])
-    
-    st.dataframe(df_index, use_container_width=True, hide_index=True)
-    total_combined_pnl += val["pnl"]
+    ce_color = "#22c55e" if val["ce_ltp"] >= val["ce_entry"] else "#ef4444"
+    pe_color = "#22c55e" if val["pe_ltp"] >= val["pe_entry"] else "#ef4444"
 
-st.markdown("---")
+    st.markdown(f"**📈 {idx_key} (Spot: {val['spot']:,.2f})**")
+
+    html_table = f"""
+    <div style='background: #1e293b; padding: 10px; border-radius: 10px; border: 1px solid #334155; margin-bottom: 15px;'>
+        <table style='width: 100%; color: #f8fafc; border-collapse: collapse; text-align: left;'>
+            <thead>
+                <tr style='border-bottom: 1px solid #334155; color: #94A3B8; font-size: 0.85rem;'>
+                    <th style='padding: 8px;'>Instrument</th>
+                    <th style='padding: 8px;'>Type</th>
+                    <th style='padding: 8px;'>Entry</th>
+                    <th style='padding: 8px;'>LTP</th>
+                    <th style='padding: 8px;'>Trailing SL</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr style='border-bottom: 1px solid #283548;'>
+                    <td style='padding: 8px; font-weight: bold;'>{idx_key} CE</td>
+                    <td style='padding: 8px; font-weight: bold;'>BUY CALL</td>
+                    <td style='padding: 8px; font-weight: bold;'>{val['ce_entry']:.2f}</td>
+                    <td style='padding: 8px; font-weight: bold; color: {ce_color};'>{val['ce_ltp']:.2f}</td>
+                    <td style='padding: 8px; font-weight: bold; color: #f59e0b;'>{ce_tsl:.2f}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px; font-weight: bold;'>{idx_key} PE</td>
+                    <td style='padding: 8px; font-weight: bold;'>BUY PUT</td>
+                    <td style='padding: 8px; font-weight: bold;'>{val['pe_entry']:.2f}</td>
+                    <td style='padding: 8px; font-weight: bold; color: {pe_color};'>{val['pe_ltp']:.2f}</td>
+                    <td style='padding: 8px; font-weight: bold; color: #f59e0b;'>{pe_tsl:.2f}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    """
+    st.markdown(html_table, unsafe_allow_html=True)
+    total_combined_pnl += val["pnl"]
+    
 
 
 # ==============================================================================
