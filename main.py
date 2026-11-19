@@ -9,11 +9,16 @@ st.set_page_config(
     layout="centered"
 )
 
-
 # ==============================================================================
-# PART 1: PORTAL MAIN HEADER (GOLD GRADIENT TITLE & SUBTITLE)
+# PART 1: DARK THEME & GOLD GRADIENT HEADER
 # ==============================================================================
 st.markdown("""
+<style>
+    .stApp {
+        background-color: #0b0f19;
+    }
+</style>
+
 <div style="text-align: center; padding: 10px 0 5px 0;">
     <h1 style="
         font-size: 2.3rem;
@@ -21,7 +26,7 @@ st.markdown("""
         letter-spacing: 2px;
         margin: 0;
         line-height: 1.25;
-        background: linear-gradient(180deg, #FDE047 0%, #D97706 100%);
+        background: linear-gradient(180deg, #FEF08A 0%, #F59E0B 55%, #D97706 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
     ">
@@ -40,3 +45,4 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.markdown("---")
+
