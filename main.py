@@ -1,4 +1,16 @@
 # ==============================================================================
+# PART 0: IMPORTS & PAGE CONFIGURATION
+# ==============================================================================
+import streamlit as st
+
+st.set_page_config(
+    page_title="Algo Trading Portal",
+    page_icon="🛡️",
+    layout="centered"
+)
+
+
+# ==============================================================================
 # PART 1: PORTAL MAIN HEADER (GOLD GRADIENT TITLE & SUBTITLE)
 # ==============================================================================
 st.markdown("""
