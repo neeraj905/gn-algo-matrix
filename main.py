@@ -48,65 +48,88 @@ st.markdown("""
 st.markdown("---")
 
 # ==============================================================================
-# PART 2: CLIENT ID HEADING (LEFT ALIGNED, FULL BOLD, DARK STYLED)
+# PART 2: MAIN PAGE DEMAT USER & ID (PER-DEVICE + REFRESH SAFE + ANGEL HOOK)
 # ==============================================================================
+def fetch_demat_holder_from_angel(client_id: str) -> str:
+    """
+    angel_api.py se connected profile/session ke zariye is Client ID ka holder name laata hai.
+    Agar abhi live broker session connected nahi hai, toh pending status return karta hai.
+    """
+    if not client_id:
+        return ""
+    # Agar angel_api.py mein koi function/session holder name de raha hai toh yahan se aayega:
+    # try:
+    #     from angel_api import get_profile_name
+    #     name = get_profile_name(client_id)
+    #     if name:
+    #         return str(name).strip().upper()
+    # except Exception:
+    #     pass
+    return st.session_state.get(f"holder_name_{client_id}", "DEMAT ACCOUNT VERIFICATION PENDING")
+
+# Sirf isi browser/device ke URL query param se ID uthao (refresh ke baad bhi yahi rahegi)
+url_cid = st.query_params.get("cid", "").strip().upper()
+
+if "active_client_id" not in st.session_state:
+    st.session_state["active_client_id"] = url_cid
+elif url_cid and not st.session_state["active_client_id"]:
+    st.session_state["active_client_id"] = url_cid
+
+current_cid = st.session_state["active_client_id"]
+if current_cid and st.query_params.get("cid", "") != current_cid:
+    st.query_params["cid"] = current_cid
+
+def _on_main_cid_submit():
+    entered_cid = st.session_state.get("main_cid_input", "").strip().upper()
+    st.session_state["active_client_id"] = entered_cid
+    if entered_cid:
+        st.query_params["cid"] = entered_cid
+    elif "cid" in st.query_params:
+        del st.query_params["cid"]
+
 st.markdown("""
 <style>
     div[data-testid="stTextInput"] label {
         color: #F8FAFC !important;
         font-weight: 900 !important;
-        font-size: 1.05rem !important;
-        text-align: left !important;
-        letter-spacing: 1px !important;
+        font-size: 1rem !important;
     }
     div[data-testid="stTextInput"] input {
         background-color: #1e293b !important;
-        color: #f8fafc !important;
+        color: #ffffff !important;
         font-weight: 800 !important;
-        border: 1px solid #475569 !important;
+        border: 1px solid #64748b !important;
         border-radius: 10px !important;
+    }
+    div[data-testid="stTextInput"] input::placeholder {
+        color: #94a3b8 !important;
+        opacity: 1 !important;
+        font-weight: 500 !important;
     }
 </style>
 """, unsafe_allow_html=True)
 
-saved_client_id = st.query_params.get("cid", "").strip().upper()
-
-if "client_id" not in st.session_state:
-    st.session_state["client_id"] = saved_client_id
-
-if st.session_state["client_id"] and st.query_params.get("cid", "") != st.session_state["client_id"]:
-    st.query_params["cid"] = st.session_state["client_id"]
-
-def _on_client_id_change():
-    entered = st.session_state.get("client_id_input", "").strip().upper()
-    st.session_state["client_id"] = entered
-    if entered:
-        st.query_params["cid"] = entered
-    elif "cid" in st.query_params:
-        del st.query_params["cid"]
-
 st.text_input(
-    "CLIENT ID",
-    value=st.session_state["client_id"],
-    key="client_id_input",
-    on_change=_on_client_id_change,
+    "DEMAT CLIENT ID",
+    value=current_cid,
+    key="main_cid_input",
+    on_change=_on_main_cid_submit,
     placeholder="Enter Client ID"
 )
 
-active_cid = st.session_state["client_id"]
-
+active_cid = st.session_state["active_client_id"]
 if active_cid:
-    demat_holder_name = st.session_state.get("demat_holder_name") or "DEMAT ACCOUNT VERIFICATION PENDING"
+    holder_name = fetch_demat_holder_from_angel(active_cid)
     st.markdown(f"""
     <div style="
         text-align: left;
+        color: #F8FAFC;
         font-weight: 900;
         font-size: 1.05rem;
-        color: #F8FAFC;
-        margin-top: 10px;
-        margin-bottom: 12px;
+        margin-top: 8px;
+        margin-bottom: 10px;
     ">
-        {demat_holder_name} ({active_cid})
+        {holder_name} &nbsp;|&nbsp; ID: {active_cid}
     </div>
     """, unsafe_allow_html=True)
 
