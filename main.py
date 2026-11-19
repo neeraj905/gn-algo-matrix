@@ -48,8 +48,27 @@ st.markdown("""
 st.markdown("---")
 
 # ==============================================================================
-# PART 2: CLIENT ID & DEMAT ACCOUNT HOLDER (NO HARDCODED NAME)
+# PART 2: CLIENT ID HEADING (LEFT ALIGNED, FULL BOLD, DARK STYLED)
 # ==============================================================================
+st.markdown("""
+<style>
+    div[data-testid="stTextInput"] label {
+        color: #F8FAFC !important;
+        font-weight: 900 !important;
+        font-size: 1.05rem !important;
+        text-align: left !important;
+        letter-spacing: 1px !important;
+    }
+    div[data-testid="stTextInput"] input {
+        background-color: #1e293b !important;
+        color: #f8fafc !important;
+        font-weight: 800 !important;
+        border: 1px solid #475569 !important;
+        border-radius: 10px !important;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 saved_client_id = st.query_params.get("cid", "").strip().upper()
 
 if "client_id" not in st.session_state:
@@ -67,43 +86,32 @@ def _on_client_id_change():
         del st.query_params["cid"]
 
 st.text_input(
-    "Enter Client ID",
+    "CLIENT ID",
     value=st.session_state["client_id"],
     key="client_id_input",
     on_change=_on_client_id_change,
-    placeholder="Apni Demat Client ID daalein"
+    placeholder="Enter Client ID"
 )
 
 active_cid = st.session_state["client_id"]
 
 if active_cid:
-    # Aage broker session connect hone par yahan usi demat account ka live name aayega
-    demat_holder_name = st.session_state.get("demat_holder_name") or "Awaiting Demat Account Verification"
-
+    demat_holder_name = st.session_state.get("demat_holder_name") or "DEMAT ACCOUNT VERIFICATION PENDING"
     st.markdown(f"""
     <div style="
-        background: #1e293b;
-        padding: 14px 16px;
-        border-radius: 12px;
-        border: 1px solid #334155;
+        text-align: left;
+        font-weight: 900;
+        font-size: 1.05rem;
+        color: #F8FAFC;
         margin-top: 10px;
-        margin-bottom: 14px;
+        margin-bottom: 12px;
     ">
-        <div style="color: #94A3B8; font-size: 0.78rem; font-weight: 700; letter-spacing: 1px;">
-            DEMAT ACCOUNT HOLDER
-        </div>
-        <div style="color: #F8FAFC; font-size: 1.15rem; font-weight: 800; margin-top: 4px;">
-            {demat_holder_name}
-        </div>
-        <div style="color: #38BDF8; font-size: 0.88rem; font-weight: 700; margin-top: 4px;">
-            CLIENT ID: {active_cid}
-        </div>
+        {demat_holder_name} ({active_cid})
     </div>
     """, unsafe_allow_html=True)
-else:
-    st.info("Apni Demat Client ID daalein — refresh karne par bhi yahi bani rahegi.")
 
 st.markdown("---")
+
 
 
 
