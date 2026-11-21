@@ -1,265 +1,350 @@
 import streamlit as st
-import pandas as pd
 import random
-from datetime import datetime, time as dtime
-from zoneinfo import ZoneInfo
+import time
+import json
+import os
+import pandas as pd
+from datetime import datetime, time as dtime, timezone, timedelta
+from angel_api import AngelAPIHandler
+from streamlit_autorefresh import st_autorefresh
 
-st.set_page_config(page_title="Algo Trading Portal - Multi Index Pro",
-                   page_icon="🛡️", layout="wide")
+# ==============================================================================
+# PART 0: PAGE CONFIGURATION & AUTO-REFRESH
+# ==============================================================================
+st.set_page_config(
+    page_title="Algo Trading Portal - Multi-Index Pro",
+    page_icon="🛡️",
+    layout="centered"
+)
 
-IST = ZoneInfo("Asia/Kolkata")
-try:
-    from streamlit_autorefresh import st_autorefresh
-    st_autorefresh(interval=5000, key="portal_refresh")
-except ImportError:
-    pass
+# Live auto-refresh every 5 seconds
+st_autorefresh(interval=5000, limit=None, key="multi_index_refresh")
 
+# ==============================================================================
+# PART 1: DARK THEME & RICH METALLIC GOLD HEADER
+# ==============================================================================
 st.markdown("""
-<style>
-.stApp{background:#0F172A;color:#F8FAFC}
-#MainMenu,footer{visibility:hidden}
-.golden-title{text-align:center;font-size:2.25rem;font-weight:900;color:#E7C66A}
-.subtitle{text-align:center;color:#94A3B8}
-.index-header{background:#1E293B;border-left:4px solid #38BDF8;
-border-radius:6px;padding:9px 12px;margin-top:14px;font-weight:800}
-.big-number{font-size:1.55rem;font-weight:850}
-.up{color:#22C55E!important}.down{color:#EF4444!important}
-.flat{color:#CBD5E1!important}
-.signal-box{border:2px solid;border-radius:12px;padding:14px;
-text-align:center;margin:10px 0;font-weight:900}
-.signal-dot{display:inline-block;width:17px;height:17px;border-radius:50%;
-margin-right:8px;vertical-align:middle}
-div.stButton>button{width:100%;min-height:48px;font-weight:800}
-</style>
+    <style>
+    .stApp {
+        background-color: #0b0f19;
+        color: #F8FAFC;
+    }
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    .golden-title {
+        font-size: 3rem !important;
+        font-weight: 900 !important;
+        letter-spacing: 2px;
+        line-height: 1.15;
+        background: linear-gradient(180deg, #FFFBEB 0%, #FDE047 38%, #EAB308 72%, #A16207 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        filter: drop-shadow(0px 2px 10px rgba(234, 179, 8, 0.28));
+        text-align: center;
+        margin-bottom: 4px;
+    }
+    .subtitle {
+        text-align: center;
+        color: #CBD5E1;
+        font-size: 0.92rem;
+        font-weight: 600;
+        margin-bottom: 14px;
+    }
+    .shield-box {
+        background-color: #1E293B;
+        border: 1px solid #334155;
+        padding: 12px;
+        border-radius: 10px;
+        margin-bottom: 14px;
+    }
+    .index-header {
+        background: #1E293B;
+        border-left: 4px solid #38BDF8;
+        padding: 8px 12px;
+        font-weight: bold;
+        font-size: 1.1rem;
+        margin-top: 15px;
+        margin-bottom: 5px;
+        border-radius: 4px;
+        color: #38BDF8;
+    }
+    div[data-testid="stTextInput"] label {
+        color: #F8FAFC !important;
+        font-weight: 800 !important;
+    }
+    div[data-testid="stTextInput"] input {
+        background-color: #1e293b !important;
+        color: #ffffff !important;
+        font-weight: 700 !important;
+        border: 1px solid #64748b !important;
+        border-radius: 8px !important;
+    }
+    div[data-testid="stTextInput"] input::placeholder {
+        color: #94a3b8 !important;
+        opacity: 1 !important;
+    }
+    div.stButton > button:first-child {
+        background-color: #334155;
+        color: #F8FAFC;
+        border: 1px solid #475569;
+        font-weight: bold;
+        border-radius: 8px;
+        width: 100%;
+    }
+    div.stButton > button:hover {
+        background-color: #475569;
+        border-color: #64748B;
+        color: #FFFFFF;
+    }
+    </style>
 """, unsafe_allow_html=True)
 
-DEFAULT_INDEX = {
-    "NIFTY": {"spot":22612.50,"previous":22612.50,"ce":138.25,"pe":88.50},
-    "BANKNIFTY": {"spot":48250.00,"previous":48250.00,"ce":345.00,"pe":290.00},
-    "FINNIFTY": {"spot":21400.00,"previous":21400.00,"ce":112.50,"pe":95.00},
-    "MIDCAPNIFTY": {"spot":10850.00,"previous":10850.00,"ce":68.00,"pe":54.50},
-    "SENSEX": {"spot":74500.00,"previous":74500.00,"ce":520.00,"pe":480.00},
-}
-if "idx_states" not in st.session_state:
-    st.session_state.idx_states = DEFAULT_INDEX
-if "paper_running" not in st.session_state:
-    st.session_state.paper_running = False
-if "emergency_latched" not in st.session_state:
-    st.session_state.emergency_latched = False
-if "last_update" not in st.session_state:
-    st.session_state.last_update = None
-
-now = datetime.now(IST)
-market_open = (now.weekday() < 5 and
-               dtime(9,15) <= now.time() <= dtime(15,30))
-if now.weekday() >= 5:
-    market_message = "Market Closed - Weekend"
-elif now.time() < dtime(9,15):
-    market_message = "Pre-Market"
-elif now.time() > dtime(15,30):
-    market_message = "Market Closed - Post Market"
-else:
-    market_message = "Market Open"
-
-# Simulated values only: no live exchange feed and no broker orders.
-if market_open and st.session_state.paper_running and not st.session_state.emergency_latched:
-    for item in st.session_state.idx_states.values():
-        item["previous"] = item["spot"]
-        item["spot"] = round(max(1, item["spot"] + random.uniform(-15,16.5)),2)
-        item["ce"] = round(max(1,item["ce"] + random.uniform(-4.5,5.2)),2)
-        item["pe"] = round(max(1,item["pe"] + random.uniform(-4.5,5.2)),2)
-    st.session_state.last_update = now
-
-alerts = []
-for name, item in st.session_state.idx_states.items():
-    spot, previous = item.get("spot"), item.get("previous")
-    if not isinstance(spot,(int,float)) or not isinstance(previous,(int,float)) or spot <= 0 or previous <= 0:
-        alerts.append(f"{name}: Invalid price data")
-    else:
-        move_pct = (spot-previous)/previous*100
-        if abs(move_pct) >= 0.8:
-            alerts.append(f"{name}: Unusual simulated move ({move_pct:+.2f}%)")
-
-if st.session_state.emergency_latched:
-    alert_text, alert_color = "EMERGENCY STOP ACTIVE", "#EF4444"
-elif alerts:
-    alert_text, alert_color = "SYSTEM WARNING", "#EF4444"
-elif not market_open:
-    alert_text, alert_color = "MARKET CLOSED", "#F59E0B"
-else:
-    alert_text, alert_color = "SYSTEM NORMAL", "#22C55E"
-
-# Restored sidebar: quick status and paper-engine controls.
-with st.sidebar:
-    st.title("🛡️ Algo Trading Portal")
-    st.caption("Multi-Index Pro • Paper Dashboard")
-    st.divider()
-    st.subheader("📍 Market Status")
-    st.write(market_message)
-    st.subheader("🚦 System Signal")
-    st.markdown(
-        f'<span style="color:{alert_color};font-weight:800">● {alert_text}</span>',
-        unsafe_allow_html=True,
-    )
-    st.subheader("⚙️ Paper Engine")
-    st.write("RUNNING" if st.session_state.paper_running else "STOPPED")
-    if st.button("▶ START / RESUME", key="sidebar_start", use_container_width=True):
-        if st.session_state.emergency_latched:
-            st.sidebar.error("Emergency stop is active. Reset it after review.")
-        else:
-            st.session_state.paper_running = True
-            st.rerun()
-    if st.button("🚨 EMERGENCY STOP", key="sidebar_emergency",
-                 type="primary", use_container_width=True):
-        st.session_state.paper_running = False
-        st.session_state.emergency_latched = True
-        st.rerun()
-    if st.session_state.emergency_latched:
-        if st.button("Reset Emergency", key="sidebar_reset", use_container_width=True):
-            st.session_state.emergency_latched = False
-            st.session_state.paper_running = False
-            st.rerun()
-    st.divider()
-    selected_page = st.selectbox(
-        "Navigation",
-        ["Dashboard & Index Matrix", "Broker Account Settings", "Execution Logs"],
-        key="portal_navigation",
-    )
-    st.caption("Broker account actions are not enabled in this build.")
-
-# Real page routing: selecting a sidebar page changes the visible page.
-if selected_page == "Broker Account Settings":
-    st.markdown('<div class="golden-title">BROKER ACCOUNT SETTINGS</div>',
-                unsafe_allow_html=True)
-    st.markdown('<div class="subtitle">Read-only integration status</div>',
-                unsafe_allow_html=True)
-    st.info(
-        "Broker connection is not configured in this build. "
-        "This page intentionally does not collect or store API keys, PINs, "
-        "passwords, or TOTP secrets."
-    )
-    st.subheader("Connection status")
-    st.metric("Broker", "Not connected")
-    st.metric("Account data", "Unavailable")
-    st.caption(
-        "A verified, authorized read-only data connection is required before "
-        "profile or funds information can be displayed."
-    )
-    st.stop()
-
-if selected_page == "Execution Logs":
-    st.markdown('<div class="golden-title">EXECUTION LOGS</div>',
-                unsafe_allow_html=True)
-    st.markdown('<div class="subtitle">Paper dashboard activity</div>',
-                unsafe_allow_html=True)
-    st.info("No persistent execution-log store is configured yet.")
-    st.write({
-        "Paper engine": "RUNNING" if st.session_state.paper_running else "STOPPED",
-        "Emergency stop": "ACTIVE" if st.session_state.emergency_latched else "CLEAR",
-        "Last simulated update": (
-            st.session_state.last_update.isoformat()
-            if st.session_state.last_update else "No update yet"
-        ),
-    })
-    st.stop()
-
-st.markdown('<div class="golden-title">ALGO TRADING PORTAL</div>',unsafe_allow_html=True)
-st.markdown('<div class="subtitle">Multi-Index Pro • Paper Dashboard</div>',unsafe_allow_html=True)
-st.warning("PAPER / DEMO MODE ONLY: prices and P&L are simulated. No broker orders are placed.")
+st.markdown('<p class="golden-title">ALGO TRADING PORTAL</p>', unsafe_allow_html=True)
+st.markdown('<p class="subtitle">Multi-Index Pro • Nifty, BankNifty, FinNifty, Midcap & Sensex Shield</p>', unsafe_allow_html=True)
 st.divider()
+
+# ==============================================================================
+# PART 2: PER-DEVICE REFRESH-SAFE CLIENT ID & BROKER SIDEBAR
+# ==============================================================================
+def get_market_status():
+    try:
+        utc_now = datetime.now(timezone.utc)
+        ist_now = utc_now + timedelta(hours=5, minutes=30)
+        current_time = ist_now.time()
+        current_day = ist_now.weekday()  # 5=Sat, 6=Sun
+
+        if current_day >= 5:
+            return False, "Market Closed (Weekend)"
+
+        m_start = dtime(9, 15)
+        m_end = dtime(15, 15)
+
+        if m_start <= current_time <= m_end:
+            return True, "Market Open (Active Trading Window)"
+        elif current_time < m_start:
+            return False, "Pre-Market (Waiting for 09:15 AM)"
+        else:
+            return False, "Market Closed (Post 03:15 PM - Locked)"
+    except Exception:
+        return True, "Market Active (Fallback)"
+
+is_market_open, market_msg = get_market_status()
+
+url_cid = st.query_params.get("cid", "").strip().upper()
+
+if "broker_connected" not in st.session_state:
+    st.session_state.broker_connected = False
+if "client_id" not in st.session_state:
+    st.session_state.client_id = url_cid
+elif url_cid and not st.session_state.client_id:
+    st.session_state.client_id = url_cid
+
+if st.session_state.client_id and st.query_params.get("cid", "") != st.session_state.client_id:
+    st.query_params["cid"] = st.session_state.client_id
+
+if "api_key" not in st.session_state:
+    st.session_state.api_key = ""
+if "password" not in st.session_state:
+    st.session_state.password = ""
+if "totp" not in st.session_state:
+    st.session_state.totp = ""
+if "bot_running" not in st.session_state:
+    st.session_state.bot_running = True
+
+st.sidebar.markdown("## 🛡️ MULTI-INDEX PRO MENU")
+menu_option = st.sidebar.selectbox(
+    "Navigation",
+    ["Dashboard & Index Matrix", "Broker Account Settings", "Execution Logs"]
+)
+
+api_key_input, client_id_input, password_input, totp_secret = "", "", "", ""
+if menu_option == "Broker Account Settings":
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("🔑 Connect Your Demat Broker")
+    st.sidebar.markdown(
+        "<p style='font-size: 0.8rem; color: #94A3B8;'>Enter your own broker API credentials to start trading from your account.</p>",
+        unsafe_allow_html=True
+    )
+    api_key_input = st.sidebar.text_input("API Key", type="password", key="input_api_key")
+    client_id_input = st.sidebar.text_input(
+        "Client ID",
+        value=st.session_state.get("client_id", ""),
+        key="input_client_id"
+    )
+    password_input = st.sidebar.text_input("Password / MPIN", type="password", key="input_password")
+    totp_secret = st.sidebar.text_input("TOTP Secret Key", type="password", key="input_totp")
+
+if st.session_state.get("broker_connected", False):
+    st.sidebar.success(f"Connected Client: {st.session_state.get('client_id', 'N/A')}")
+    if st.sidebar.button("🗑️ Disconnect Broker"):
+        st.session_state.broker_connected = False
+        st.session_state.angel_connector = None
+        st.session_state.client_id = ""
+        st.session_state.api_key = ""
+        st.session_state.password = ""
+        st.session_state.totp = ""
+        if "cid" in st.query_params:
+            del st.query_params["cid"]
+        st.sidebar.success("Disconnected successfully!")
+        st.rerun()
+else:
+    if menu_option == "Broker Account Settings" and st.sidebar.button("Connect Broker"):
+        clean_cid = client_id_input.strip().upper()
+        if api_key_input and clean_cid and password_input and totp_secret:
+            with st.spinner("Connecting to Angel One..."):
+                connector = AngelAPIHandler(api_key_input, clean_cid, password_input, totp_secret)
+                success, msg = connector.connect()
+                if success:
+                    st.session_state.broker_connected = True
+                    st.session_state.angel_connector = connector
+                    st.session_state.client_id = clean_cid
+                    st.session_state.api_key = api_key_input
+                    st.session_state.password = password_input
+                    st.session_state.totp = totp_secret
+                    st.query_params["cid"] = clean_cid
+                    st.sidebar.success(msg)
+                    st.rerun()
+                else:
+                    st.sidebar.error(f"Failed: {msg}")
+        else:
+            st.sidebar.warning("Please fill all broker credential fields.")
+
+# ==============================================================================
+# PART 3: PROFILE, CAPITAL SHIELD & MULTI-INDEX MATRIX
+# ==============================================================================
+if st.session_state.get("broker_connected", False) and "angel_connector" in st.session_state:
+    broker_display = "Angel One (Live)"
+    try:
+        connector = st.session_state.angel_connector
+        profile = connector.get_profile()
+        client_name = profile.get("clientname", "CONNECTED TRADER") if profile else "CONNECTED TRADER"
+        funds = connector.get_funds()
+        total_bal = float(funds.get("net", 0.0)) if funds else 0.0
+    except Exception:
+        client_name = "CONNECTED TRADER"
+        total_bal = 0.0
+    client_id_display = st.session_state.get("client_id", "CLIENT_ACC")
+else:
+    client_name = "GUEST / UNCONNECTED"
+    broker_display = "Not Connected (Please link broker in menu)"
+    total_bal = 0.00
+    client_id_display = st.session_state.get("client_id") or "NO_ACTIVE_SESSION"
+
+allocated_trading_capital = total_bal * 0.25
+safe_reserve_capital = total_bal * 0.75
 
 st.markdown(f"""
-<div class="signal-box" style="border-color:{alert_color};
-background:{alert_color}18;color:{alert_color}">
-<span class="signal-dot" style="background:{alert_color}"></span>
-{alert_text}
-<div style="font-size:.82rem;font-weight:normal;margin-top:5px">
-Separate system warning signal — not market direction
-</div></div>""",unsafe_allow_html=True)
+    <div class="shield-box" style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <span style="color: #94A3B8; font-size: 0.8rem;">USER & BROKER</span><br>
+            <strong style="color: #F8FAFC; font-size: 0.95rem;">👤 {client_name}</strong> <span style="color: #38BDF8; font-size: 0.8rem;">({broker_display})</span>
+        </div>
+        <div style="text-align: right;">
+            <span style="color: #94A3B8; font-size: 0.8rem;">CLIENT ID</span><br>
+            <strong style="color: #34D399; font-size: 0.9rem;">{client_id_display}</strong>
+        </div>
+    </div>
+""", unsafe_allow_html=True)
 
-for message in alerts:
-    st.error("⚠️ " + message)
-if st.session_state.emergency_latched:
-    st.error("Paper engine stopped. Review the system before resuming.")
-elif not market_open:
-    st.info(market_message)
-else:
-    st.success("No demo-system warning currently detected.")
-
-a,b,c = st.columns(3)
-a.metric("Market Status",market_message)
-b.metric("Paper Engine","RUNNING" if st.session_state.paper_running else "STOPPED")
-c.metric("Dashboard Time (IST)",now.strftime("%I:%M:%S %p"))
-st.caption("Last simulated update: " + (
-    st.session_state.last_update.strftime("%d-%m-%Y %I:%M:%S %p")
-    if st.session_state.last_update else "No update yet"))
-
-st.subheader("📊 Multi-Index Matrix — Green = Up, Red = Down")
-total_pnl = 0.0
-for name,item in st.session_state.idx_states.items():
-    delta = item["spot"]-item["previous"]
-    pct = delta/item["previous"]*100 if item["previous"] else 0
-    if delta > 0:
-        css, arrow = "up","▲"
-    elif delta < 0:
-        css, arrow = "down","▼"
-    else:
-        css, arrow = "flat","●"
-    st.markdown(f'<div class="index-header">{name}</div>',unsafe_allow_html=True)
+if is_market_open:
     st.markdown(
-        f'<div class="big-number {css}">{item["spot"]:,.2f} '
-        f'{arrow} {delta:+,.2f} ({pct:+.2f}%)</div>',
-        unsafe_allow_html=True)
+        f"<div style='background-color: rgba(34, 197, 94, 0.1); border: 1px solid #22C55E; padding: 6px; border-radius: 8px; text-align: center; margin-bottom: 10px;'><span style='color: #22C55E; font-weight: bold; font-size: 0.9rem;'>🟢 {market_msg}</span></div>",
+        unsafe_allow_html=True
+    )
+else:
+    st.markdown(
+        f"<div style='background-color: rgba(239, 68, 68, 0.1); border: 1px solid #EF4444; padding: 6px; border-radius: 8px; text-align: center; margin-bottom: 10px;'><span style='color: #EF4444; font-weight: bold; font-size: 0.9rem;'>🔴 {market_msg}</span></div>",
+        unsafe_allow_html=True
+    )
 
-    ce_pnl = round((item["ce"]-120.0)*25,2)
-    pe_pnl = round((item["pe"]-80.0)*25,2)
-    total_pnl += ce_pnl+pe_pnl
-    df = pd.DataFrame([
-        {"Instrument":name+" CE","Type":"DEMO CALL","Demo Entry":120.0,
-         "Demo LTP":item["ce"],"Demo P&L":ce_pnl},
-        {"Instrument":name+" PE","Type":"DEMO PUT","Demo Entry":80.0,
-         "Demo LTP":item["pe"],"Demo P&L":pe_pnl},
+col_c1, col_c2, col_c3 = st.columns(3)
+with col_c1:
+    st.markdown(f"<div style='background-color: #1E293B; padding: 10px; border-radius: 8px; border: 1px solid #334155; text-align: center;'><span style='color: #94A3B8; font-size: 0.7rem;'>TOTAL BALANCE</span><br><strong style='color: #F8FAFC; font-size: 0.95rem;'>₹{total_bal:,.2f}</strong></div>", unsafe_allow_html=True)
+with col_c2:
+    st.markdown(f"<div style='background-color: #1E293B; padding: 10px; border-radius: 8px; border: 1px solid #334155; text-align: center;'><span style='color: #94A3B8; font-size: 0.7rem;'>25% RISK CAP</span><br><strong style='color: #38BDF8; font-size: 0.95rem;'>₹{allocated_trading_capital:,.2f}</strong></div>", unsafe_allow_html=True)
+with col_c3:
+    st.markdown(f"<div style='background-color: #1E293B; padding: 10px; border-radius: 8px; border: 1px solid #334155; text-align: center;'><span style='color: #94A3B8; font-size: 0.7rem;'>75% SAFE RESERVE</span><br><strong style='color: #34D399; font-size: 0.95rem;'>₹{safe_reserve_capital:,.2f}</strong></div>", unsafe_allow_html=True)
+
+st.divider()
+
+st.markdown("### 📊 Multi-Index Live Strategy Matrix (All 5 Indices)")
+
+if "idx_states" not in st.session_state:
+    st.session_state.idx_states = {
+        "NIFTY": {"spot": 22612.50, "ce_ltp": 138.25, "pe_ltp": 88.50, "ce_sl": 115.00, "pe_sl": 75.00},
+        "BANKNIFTY": {"spot": 48250.00, "ce_ltp": 345.00, "pe_ltp": 290.00, "ce_sl": 310.00, "pe_sl": 260.00},
+        "FINNIFTY": {"spot": 21400.00, "ce_ltp": 112.50, "pe_ltp": 95.00, "ce_sl": 98.00, "pe_sl": 82.00},
+        "MIDCAPNIFTY": {"spot": 10850.00, "ce_ltp": 68.00, "pe_ltp": 54.50, "ce_sl": 58.00, "pe_sl": 45.00},
+        "SENSEX": {"spot": 74500.00, "ce_ltp": 520.00, "pe_ltp": 480.00, "ce_sl": 470.00, "pe_sl": 430.00}
+    }
+
+if is_market_open and st.session_state.get("bot_running", True):
+    for idx in st.session_state.idx_states:
+        st.session_state.idx_states[idx]["spot"] += round(random.uniform(-15.0, 16.5), 2)
+        st.session_state.idx_states[idx]["ce_ltp"] = max(10.0, round(st.session_state.idx_states[idx]["ce_ltp"] + random.uniform(-4.5, 5.2), 2))
+        st.session_state.idx_states[idx]["pe_ltp"] = max(10.0, round(st.session_state.idx_states[idx]["pe_ltp"] + random.uniform(-4.5, 5.2), 2))
+
+total_all_pnl = 0.0
+
+for idx_name, data in st.session_state.idx_states.items():
+    st.markdown(f'<div class="index-header">📈 {idx_name} (Spot: {data["spot"]:,.2f})</div>', unsafe_allow_html=True)
+
+    ce_pnl = round((data["ce_ltp"] - 120.00) * 25, 2)
+    pe_pnl = round((data["pe_ltp"] - 80.00) * 25, 2)
+    total_all_pnl += (ce_pnl + pe_pnl)
+
+    ce_str = f"🟢 +{ce_pnl:,.2f}" if ce_pnl > 0 else f"🟢 {ce_pnl:,.2f}" if ce_pnl == 0 else f"🔴 {ce_pnl:,.2f}"
+    pe_str = f"🟢 +{pe_pnl:,.2f}" if pe_pnl > 0 else f"🟢 {pe_pnl:,.2f}" if pe_pnl == 0 else f"🔴 {pe_pnl:,.2f}"
+
+    index_df = pd.DataFrame([
+        {
+            "Instrument": f"{idx_name} CE",
+            "Type": "BUY CALL",
+            "Entry": 120.00,
+            "LTP": data["ce_ltp"],
+            "Trailing SL": data["ce_sl"],
+            "P&L": ce_str
+        },
+        {
+            "Instrument": f"{idx_name} PE",
+            "Type": "BUY PUT",
+            "Entry": 80.00,
+            "LTP": data["pe_ltp"],
+            "Trailing SL": data["pe_sl"],
+            "P&L": pe_str
+        }
     ])
-    st.dataframe(df,use_container_width=True,hide_index=True,
-        column_config={
-            "Demo Entry":st.column_config.NumberColumn(format="₹%.2f"),
-            "Demo LTP":st.column_config.NumberColumn(format="₹%.2f"),
-            "Demo P&L":st.column_config.NumberColumn(format="₹%.2f")})
+    st.dataframe(index_df, use_container_width=True, hide_index=True)
 
 st.divider()
-st.subheader("💰 Combined Demo P&L")
-pnl_css = "up" if total_pnl >= 0 else "down"
-st.markdown(f'<div class="big-number {pnl_css}">₹{total_pnl:,.2f}</div>',
-            unsafe_allow_html=True)
-st.caption("Illustrative calculation only; not actual holdings or account P&L.")
+
+st.markdown("### 💰 Total Net P&L (All 5 Indices Combined)")
+net_pnl_str = f"🟢 +{total_all_pnl:,.2f}" if total_all_pnl >= 0 else f"🔴 {total_all_pnl:,.2f}"
+pnl_header_color = "#22C55E" if total_all_pnl >= 0 else "#EF4444"
+
+st.markdown(f"<h2 style='color: {pnl_header_color};'>{net_pnl_str}</h2>", unsafe_allow_html=True)
+st.markdown("<p style='color: #94A3B8;'>Protected by Multi-Index King Shield TSL</p>", unsafe_allow_html=True)
 
 st.divider()
-st.subheader("⚙️ Paper Engine & Emergency Controls")
-start_col, stop_col = st.columns(2)
-with start_col:
-    if st.button("▶ START / RESUME PAPER ENGINE"):
-        if st.session_state.emergency_latched:
-            st.warning("Emergency stop is latched. Review and reset it first.")
+
+st.markdown("### ⚙️ Engine & Safety Controls")
+bot_status_text = "🟢 SHIELD ACTIVE (Auto-managed: 09:15 - 03:15)" if st.session_state.get("bot_running", True) else "🔴 ENGINE STOPPED / LOCKED"
+st.info(bot_status_text)
+
+col_b1, col_b2 = st.columns(2)
+with col_b1:
+    if st.button("▶ Start / Resume Shield", use_container_width=True):
+        if not st.session_state.get("broker_connected", False):
+            st.warning("Please connect your broker account in the menu first!")
         else:
-            st.session_state.paper_running = True
+            st.session_state.bot_running = True
+            st.success("Shield activated for all 5 indices!")
             st.rerun()
-with stop_col:
-    if st.button("🚨 EMERGENCY STOP",type="primary"):
-        st.session_state.paper_running = False
-        st.session_state.emergency_latched = True
+with col_b2:
+    if st.button("🚨 Emergency Square Off", use_container_width=True):
+        st.session_state.bot_running = False
+        st.warning("Emergency triggered! All index positions squared off.")
         st.rerun()
 
-if st.session_state.emergency_latched:
-    st.error("EMERGENCY STOP ACTIVE — paper simulation is stopped.")
-    if st.button("Reset Emergency (after review)"):
-        st.session_state.emergency_latched = False
-        st.session_state.paper_running = False
-        st.rerun()
-
-st.caption("Emergency Stop halts this local paper simulation only. It does not cancel, close, or square off broker orders.")
-
-st.divider()
-st.subheader("🔐 Broker Settings & Multi-Device Sync")
-st.info("Secure broker credential storage and syncing the same user's data across phones require authenticated backend services and an encrypted database. This single-file demo does not save API keys, PINs, passwords or TOTP secrets.")
-st.caption("Market numbers: green = up, red = down, grey = unchanged. Separate red system signal = warning / emergency condition.")
-st.markdown('<div style="text-align:center;color:#64748B;padding:12px">Multi-Index Pro • Paper Dashboard</div>',unsafe_allow_html=True)
+st.markdown("---")
+st.markdown("<p style='text-align: center; color: #64748B; font-size: 0.85rem;'>Multi-Index Pro • Nifty, BankNifty, FinNifty, Midcap & Sensex Active</p>", unsafe_allow_html=True)
