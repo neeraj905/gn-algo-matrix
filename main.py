@@ -120,12 +120,48 @@ with st.sidebar:
             st.session_state.paper_running = False
             st.rerun()
     st.divider()
-    st.caption("Navigation")
-    st.markdown("- Dashboard")
-    st.markdown("- Multi-Index Matrix")
-    st.markdown("- Paper Engine")
-    st.markdown("- Broker Settings")
-    st.caption("Demo only • No broker orders")
+    selected_page = st.selectbox(
+        "Navigation",
+        ["Dashboard & Index Matrix", "Broker Account Settings", "Execution Logs"],
+        key="portal_navigation",
+    )
+    st.caption("Broker account actions are not enabled in this build.")
+
+# Real page routing: selecting a sidebar page changes the visible page.
+if selected_page == "Broker Account Settings":
+    st.markdown('<div class="golden-title">BROKER ACCOUNT SETTINGS</div>',
+                unsafe_allow_html=True)
+    st.markdown('<div class="subtitle">Read-only integration status</div>',
+                unsafe_allow_html=True)
+    st.info(
+        "Broker connection is not configured in this build. "
+        "This page intentionally does not collect or store API keys, PINs, "
+        "passwords, or TOTP secrets."
+    )
+    st.subheader("Connection status")
+    st.metric("Broker", "Not connected")
+    st.metric("Account data", "Unavailable")
+    st.caption(
+        "A verified, authorized read-only data connection is required before "
+        "profile or funds information can be displayed."
+    )
+    st.stop()
+
+if selected_page == "Execution Logs":
+    st.markdown('<div class="golden-title">EXECUTION LOGS</div>',
+                unsafe_allow_html=True)
+    st.markdown('<div class="subtitle">Paper dashboard activity</div>',
+                unsafe_allow_html=True)
+    st.info("No persistent execution-log store is configured yet.")
+    st.write({
+        "Paper engine": "RUNNING" if st.session_state.paper_running else "STOPPED",
+        "Emergency stop": "ACTIVE" if st.session_state.emergency_latched else "CLEAR",
+        "Last simulated update": (
+            st.session_state.last_update.isoformat()
+            if st.session_state.last_update else "No update yet"
+        ),
+    })
+    st.stop()
 
 st.markdown('<div class="golden-title">ALGO TRADING PORTAL</div>',unsafe_allow_html=True)
 st.markdown('<div class="subtitle">Multi-Index Pro • Paper Dashboard</div>',unsafe_allow_html=True)
