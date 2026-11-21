@@ -89,6 +89,44 @@ elif not market_open:
 else:
     alert_text, alert_color = "SYSTEM NORMAL", "#22C55E"
 
+# Restored sidebar: quick status and paper-engine controls.
+with st.sidebar:
+    st.title("🛡️ Algo Trading Portal")
+    st.caption("Multi-Index Pro • Paper Dashboard")
+    st.divider()
+    st.subheader("📍 Market Status")
+    st.write(market_message)
+    st.subheader("🚦 System Signal")
+    st.markdown(
+        f'<span style="color:{alert_color};font-weight:800">● {alert_text}</span>',
+        unsafe_allow_html=True,
+    )
+    st.subheader("⚙️ Paper Engine")
+    st.write("RUNNING" if st.session_state.paper_running else "STOPPED")
+    if st.button("▶ START / RESUME", key="sidebar_start", use_container_width=True):
+        if st.session_state.emergency_latched:
+            st.sidebar.error("Emergency stop is active. Reset it after review.")
+        else:
+            st.session_state.paper_running = True
+            st.rerun()
+    if st.button("🚨 EMERGENCY STOP", key="sidebar_emergency",
+                 type="primary", use_container_width=True):
+        st.session_state.paper_running = False
+        st.session_state.emergency_latched = True
+        st.rerun()
+    if st.session_state.emergency_latched:
+        if st.button("Reset Emergency", key="sidebar_reset", use_container_width=True):
+            st.session_state.emergency_latched = False
+            st.session_state.paper_running = False
+            st.rerun()
+    st.divider()
+    st.caption("Navigation")
+    st.markdown("- Dashboard")
+    st.markdown("- Multi-Index Matrix")
+    st.markdown("- Paper Engine")
+    st.markdown("- Broker Settings")
+    st.caption("Demo only • No broker orders")
+
 st.markdown('<div class="golden-title">ALGO TRADING PORTAL</div>',unsafe_allow_html=True)
 st.markdown('<div class="subtitle">Multi-Index Pro • Paper Dashboard</div>',unsafe_allow_html=True)
 st.warning("PAPER / DEMO MODE ONLY: prices and P&L are simulated. No broker orders are placed.")
