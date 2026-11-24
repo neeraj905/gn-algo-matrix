@@ -1,19 +1,16 @@
 import pyotp
 import requests
 
-# Angel One SDK
 try:
     from SmartApi import SmartConnect
 except ImportError:
     SmartConnect = None
 
-# Kotak Neo SDK
 try:
     from neo_api_client import NeoAPI
 except ImportError:
     NeoAPI = None
 
-# Dhan SDK
 try:
     from dhanhq import dhanhq
 except ImportError:
@@ -31,7 +28,7 @@ class MultiBrokerHandler:
         try:
             if self.broker_name == "Angel One":
                 if not SmartConnect:
-                    return False, "smartapi-python library install nahi hai"
+                    return False, "smartapi-python library missing"
                 self.client = SmartConnect(api_key=self.creds["api_key"])
                 totp = pyotp.TOTP(self.creds["totp_secret"]).now()
                 data = self.client.generateSession(
@@ -44,7 +41,7 @@ class MultiBrokerHandler:
 
             elif self.broker_name == "Kotak Neo":
                 if not NeoAPI:
-                    return False, "kotakneoapi library install nahi hai"
+                    return False, "kotakneoapi library missing"
                 self.client = NeoAPI(
                     environment="prod",
                     access_token=self.creds["access_token"],
@@ -56,28 +53,26 @@ class MultiBrokerHandler:
                     ucc=self.creds["client_id"],
                     totp=totp
                 )
-                val_res = self.client.totp_validate(mpin=self.creds["password"])
-                if val_res:
+                if self.client.totp_validate(mpin=self.creds["password"]):
                     self.connected = True
                     return True, f"Kotak Neo Connected ({self.creds['client_id']})"
-                return False, "Kotak Neo TOTP/MPIN Validation Failed"
+                return False, "Kotak Neo Validation Failed"
 
             elif self.broker_name == "Dhan":
                 if not dhanhq:
-                    return False, "dhanhq library install nahi hai"
+                    return False, "dhanhq library missing"
                 self.client = dhanhq(self.creds["client_id"], self.creds["access_token"])
                 funds = self.client.get_fund_limits()
                 if funds and funds.get("status") == "success":
                     self.connected = True
                     return True, f"Dhan Connected ({self.creds['client_id']})"
-                return False, "Dhan Token/Client ID Invalid"
+                return False, "Dhan Token Invalid"
 
             elif self.broker_name in ["Zerodha Kite", "Upstox"]:
-                # Access token based session verification
                 if self.creds.get("access_token") and self.creds.get("api_key"):
                     self.connected = True
-                    return True, f"{self.broker_name} Session Active ({self.creds['client_id']})"
-                return False, "API Key aur Daily Access Token zaroori hai"
+                    return True, f"{self.broker_name} Active ({self.creds['client_id']})"
+                return False, "API Key & Access Token Required"
 
             return False, "Unsupported Broker"
         except Exception as e:
@@ -91,40 +86,46 @@ class MultiBrokerHandler:
                 res = self.client.rmsLimit()
                 if res and res.get("status") and res.get("data"):
                     return float(res["data"].get("availablecash", 0.0))
-
             elif self.broker_name == "Kotak Neo":
                 res = self.client.limits()
-                if res and isinstance(res, dict):
+                if isinstance(res, dict):
                     return float(res.get("Net", 0.0))
-
             elif self.broker_name == "Dhan":
                 res = self.client.get_fund_limits()
                 if res and res.get("data"):
                     return float(res["data"].get("availabelBalance", 0.0))
-
             elif self.broker_name == "Zerodha Kite":
-                headers = {
-                    "X-Kite-Version": "3",
-                    "Authorization": f"token {self.creds['api_key']}:{self.creds['access_token']}"
-                }
+                headers = {"X-Kite-Version": "3", "Authorization": f"token {self.creds['api_key']}:{self.creds['access_token']}"}
                 r = requests.get("https://kite.trade", headers=headers, timeout=5).json()
                 return float(r["data"]["equity"]["available"]["live_balance"])
-
             elif self.broker_name == "Upstox":
-                headers = {
-                    "Accept": "application/json",
-                    "Authorization": f"Bearer {self.creds['access_token']}"
-                }
+                headers = {"Accept": "application/json", "Authorization": f"Bearer {self.creds['access_token']}"}
                 r = requests.get("https://upstox.com", headers=headers, timeout=5).json()
                 return float(r["data"]["equity"]["available_margin"])
         except Exception:
             pass
         return 0.0
 
-    def place_limit_order(self, symbol, token, side, qty, price, exchange="NFO"):
-        """SEBI Compliant Limit Order Placement across all brokers"""
+    def get_ltp(self, exchange, symbol, token):
         if not self.connected:
-            return False, "Broker Connected Nahi Hai"
+            return None
+        try:
+            if self.broker_name == "Angel One":
+                res = self.client.ltpData(exchange, symbol, str(token))
+                if res and res.get("status") and res.get("data"):
+                    return float(res["data"].get("ltp", 0.0))
+            elif self.broker_name == "Zerodha Kite":
+                headers = {"X-Kite-Version": "3", "Authorization": f"token {self.creds['api_key']}:{self.creds['access_token']}"}
+                q = f"{exchange}:{symbol}"
+                r = requests.get(f"https://kite.trade{q}", headers=headers, timeout=5).json()
+                return float(r["data"][q]["last_price"])
+        except Exception:
+            pass
+        return None
+
+    def place_limit_order(self, symbol, token, side, qty, price, exchange="NFO"):
+        if not self.connected:
+            return False, "Broker Not Connected"
         try:
             price = round(float(price), 2)
             qty = int(qty)
@@ -145,11 +146,12 @@ class MultiBrokerHandler:
                     "quantity": str(qty)
                 }
                 oid = self.client.placeOrder(params)
-                return True, oid
+                return (True, oid) if oid else (False, "No Order ID")
 
             elif self.broker_name == "Kotak Neo":
+                seg = "bse_fo" if exchange == "BFO" else "nse_fo"
                 res = self.client.place_order(
-                    exchange_segment="nse_fo" if exchange == "NFO" else "nse_cm",
+                    exchange_segment=seg,
                     product="MIS",
                     price=str(price),
                     order_type="L",
@@ -161,9 +163,10 @@ class MultiBrokerHandler:
                 return True, str(res)
 
             elif self.broker_name == "Dhan":
+                seg = self.client.BSE_FNO if exchange == "BFO" else self.client.FNO
                 res = self.client.place_order(
                     security_id=str(token),
-                    exchange_segment=self.client.FNO if exchange == "NFO" else self.client.NSE,
+                    exchange_segment=seg,
                     transaction_type=self.client.BUY if side == "BUY" else self.client.SELL,
                     quantity=qty,
                     order_type=self.client.LIMIT,
@@ -173,10 +176,7 @@ class MultiBrokerHandler:
                 return True, str(res)
 
             elif self.broker_name == "Zerodha Kite":
-                headers = {
-                    "X-Kite-Version": "3",
-                    "Authorization": f"token {self.creds['api_key']}:{self.creds['access_token']}"
-                }
+                headers = {"X-Kite-Version": "3", "Authorization": f"token {self.creds['api_key']}:{self.creds['access_token']}"}
                 payload = {
                     "tradingsymbol": symbol,
                     "exchange": exchange,
@@ -191,10 +191,7 @@ class MultiBrokerHandler:
                 return True, str(r)
 
             elif self.broker_name == "Upstox":
-                headers = {
-                    "Accept": "application/json",
-                    "Authorization": f"Bearer {self.creds['access_token']}"
-                }
+                headers = {"Accept": "application/json", "Authorization": f"Bearer {self.creds['access_token']}"}
                 payload = {
                     "quantity": qty,
                     "product": "I",
@@ -215,7 +212,6 @@ class MultiBrokerHandler:
             return False, str(e)
 
     def square_off_all(self):
-        """Emergency Kill Switch & 3:15 PM Auto Exit for Active Broker"""
         logs = []
         if not self.connected:
             return False, ["Broker not connected"]
@@ -224,16 +220,11 @@ class MultiBrokerHandler:
                 ob = self.client.orderBook()
                 if ob and ob.get("data"):
                     for o in ob["data"]:
-                        if str(o.get("orderstatus", "")).lower() in ["open", "trigger pending"]:
+                        if str(o.get("orderstatus", "")).lower() in ["open", "trigger pending", "validation pending"]:
                             self.client.cancelOrder(o["orderid"], o["variety"])
-                            logs.append(f"Cancelled: {o['orderid']}")
+                            logs.append(f"Cancelled Order: {o['orderid']}")
                 pos = self.client.position()
                 if pos and pos.get("data"):
                     for p in pos["data"]:
                         net = int(p.get("netqty", 0))
                         if net != 0:
-                            side = "SELL" if net > 0 else "BUY"
-                            ltp = float(p.get("ltp", 0))
-                            px = ltp * 1.02 if side == "BUY" else max(0.05, ltp * 0.98)
-                            self.place_limit_order(p["tradingsymbol"], p["symboltoken"], side, abs(net), px, p["exchange"])
-                  
