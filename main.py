@@ -400,3 +400,6 @@ else:
             st.rerun()
 
 st.markdown("---")
+
+st.markdown("<p style='text-align: center; color: #64748B; font-size: 0.85rem;'>Multi-Index Pro • Nifty, BankNifty, FinNifty, Midcap & Sensex Active</p>", unsafe_allow_html=True)
+
