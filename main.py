@@ -13,7 +13,6 @@ st.set_page_config(
     layout="centered"
 )
 
-# Har 8 second mein safe refresh (taaki live data load hone ka poora samay mile)
 st_autorefresh(interval=8000, limit=None, key="multi_index_live_refresh")
 
 # --- Market Timing Check (09:15 to 15:15 IST) ---
@@ -210,3 +209,194 @@ st.markdown("""
     .shield-box { background-color: #1E293B; border: 1px solid #334155; padding: 14px; border-radius: 10px; margin-bottom: 12px; }
     @keyframes blinker { 50% { opacity: 0.2; background-color: #7F1D1D; } }
     .danger-beacon {
+        background-color: #DC2626; color: #FFFFFF; padding: 16px; border-radius: 10px;
+        border: 3px solid #FCA5A5; text-align: center; font-weight: 900; font-size: 1.1rem;
+        animation: blinker 1s linear infinite; margin-bottom: 15px;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# --- Header ---
+st.markdown('<div class="golden-title">ALGO TRADING PORTAL</div>', unsafe_allow_html=True)
+st.markdown('<div class="subtitle">Multi-Broker & Multi-Index Pro • Nifty, BankNifty, FinNifty, Midcap & Sensex Shield</div>', unsafe_allow_html=True)
+
+# --- Blinking Red Danger Light ---
+if st.session_state.danger_alarm:
+    st.markdown(f"""
+        <div class="danger-beacon">
+            🚨 KHATRE KI GHANTI / DANGER ALERT 🚨<br>
+            <span style="font-size: 0.9rem; font-weight: normal;">{st.session_state.danger_reason}</span>
+        </div>
+    """, unsafe_allow_html=True)
+    if st.button("🔕 Alarm Band Karein (Reset Alert)"):
+        st.session_state.danger_alarm = False
+        st.session_state.danger_reason = ""
+        st.rerun()
+
+# --- User & Broker Card ---
+if st.session_state.broker_connected:
+    user_title = f"{st.session_state.selected_broker.upper()} • {st.session_state.creds.get('client_id', '')}"
+    user_sub = f"Active Mode: {st.session_state.trading_mode} (Device Isolated)"
+else:
+    user_title = "GUEST / UNCONNECTED"
+    user_sub = "Sidebar (>>) mein 'Broker Account Settings' khol kar apna broker jodein"
+
+st.markdown(f"""
+    <div class="shield-box">
+        <div style="font-size: 0.75rem; color: #94A3B8;">ACTIVE USER & BROKER</div>
+        <div style="font-size: 1.1rem; font-weight: bold; color: #F8FAFC;">👤 {user_title}</div>
+        <div style="font-size: 0.85rem; color: #38BDF8;">{user_sub}</div>
+    </div>
+""", unsafe_allow_html=True)
+
+if is_market_open:
+    st.success(f"🟢 {market_msg}")
+else:
+    st.warning(f"🟠 {market_msg}")
+
+# --- Balance & 25%/75% Shield ---
+total_balance = st.session_state.broker_handler.get_balance() if st.session_state.broker_connected else 100000.0
+risk_cap = total_balance * 0.25
+safe_reserve = total_balance * 0.75
+
+col1, col2, col3 = st.columns(3)
+col1.metric("TOTAL BALANCE", f"₹{total_balance:,.2f}")
+col2.metric("25% RISK CAP", f"₹{risk_cap:,.2f}")
+col3.metric("75% SAFE RESERVE", f"₹{safe_reserve:,.2f}")
+
+# --- Main Content ---
+if menu_option == "Execution Logs":
+    st.subheader("📜 Live Execution & Safety Logs")
+    for log in st.session_state.logs or ["Abhi koi log nahi hai."]:
+        st.text(log)
+else:
+    st.subheader("📊 Multi-Index Live Strategy Matrix (All 5 Indices)")
+    engine = st.session_state.market_engine
+    handler = st.session_state.broker_handler
+    
+    unrealized_pnl = 0.0
+    sideways_count = 0
+
+    for idx_name in INDEX_CONFIG.keys():
+        spot, chg_pct = engine.get_live_spot_and_change(idx_name, handler)
+        signal = engine.evaluate_signal(chg_pct)
+        if signal == "SIDEWAYS":
+            sideways_count += 1
+
+        ce_contract, pe_contract = engine.get_atm_option_contracts(idx_name, spot) if spot else (None, None)
+        ce_sym = ce_contract["symbol"] if ce_contract else f"{idx_name} ATM CE"
+        pe_sym = pe_contract["symbol"] if pe_contract else f"{idx_name} ATM PE"
+
+        ce_ltp = None
+        pe_ltp = None
+        if handler and hasattr(handler, "get_ltp"):
+            if ce_contract:
+                ce_ltp = handler.get_ltp(ce_contract["exchange"], ce_sym, ce_contract["token"])
+            if pe_contract:
+                pe_ltp = handler.get_ltp(pe_contract["exchange"], pe_sym, pe_contract["token"])
+
+        active = st.session_state.active_trades.get(idx_name)
+        idx_pnl = 0.0
+
+        if active:
+            curr_ltp = ce_ltp if active["side"] == "CE" else pe_ltp
+            if curr_ltp:
+                idx_pnl = round((curr_ltp - active["entry"]) * active["qty"], 2)
+                new_sl = round(curr_ltp * 0.88, 2)
+                if new_sl > active["sl"]:
+                    active["sl"] = new_sl
+
+                if curr_ltp <= active["sl"] or curr_ltp >= active["target"]:
+                    if st.session_state.trading_mode == "LIVE REAL MONEY" and handler:
+                        exit_px = max(0.05, curr_ltp * 0.98)
+                        handler.place_limit_order(active["symbol"], active["token"], "SELL", active["qty"], exit_px, active["exchange"])
+                    st.session_state.realized_pnl += idx_pnl
+                    add_log(f"EXIT {active['symbol']} @ ₹{curr_ltp} | P&L: ₹{idx_pnl}")
+                    del st.session_state.active_trades[idx_name]
+                    active = None
+
+        if not active and st.session_state.bot_running and is_market_open and signal in ["BUY_CE", "BUY_PE"]:
+            chosen = ce_contract if signal == "BUY_CE" else pe_contract
+            entry_ltp = ce_ltp if signal == "BUY_CE" else pe_ltp
+            if chosen and entry_ltp and entry_ltp > 5.0:
+                qty = chosen["lot_size"] * int(st.session_state.lots_per_index)
+                trade_cost = entry_ltp * qty
+                if trade_cost <= risk_cap:
+                    order_ok = True
+                    if st.session_state.trading_mode == "LIVE REAL MONEY" and handler:
+                        buy_px = round(entry_ltp * 1.01, 2)
+                        order_ok, oid = handler.place_limit_order(chosen["symbol"], chosen["token"], "BUY", qty, buy_px, chosen["exchange"])
+                        add_log(f"LIVE BUY {chosen['symbol']} ({qty}) -> {oid}")
+                    else:
+                        add_log(f"PAPER BUY {chosen['symbol']} ({qty}) @ ₹{entry_ltp}")
+
+                    if order_ok:
+                        st.session_state.active_trades[idx_name] = {
+                            "symbol": chosen["symbol"],
+                            "token": chosen["token"],
+                            "exchange": chosen["exchange"],
+                            "side": "CE" if signal == "BUY_CE" else "PE",
+                            "entry": entry_ltp,
+                            "qty": qty,
+                            "sl": round(entry_ltp * 0.85, 2),
+                            "target": round(entry_ltp * 1.30, 2)
+                        }
+
+        unrealized_pnl += idx_pnl
+        spot_str = f"{spot:,.2f} ({chg_pct:+.2f}%)" if spot else "Fetching..."
+        status_badge = "🟡 SIDEWAYS" if signal == "SIDEWAYS" else ("🟢 BULLISH" if signal == "BUY_CE" else "🔴 BEARISH")
+
+        with st.expander(f"📈 {idx_name} | Spot: {spot_str} | {status_badge}", expanded=True):
+            st.table([
+                {
+                    "Contract": ce_sym,
+                    "Signal": "ACTIVE BUY" if (active and active["side"] == "CE") else "WAIT",
+                    "Entry": active["entry"] if (active and active["side"] == "CE") else "-",
+                    "Live LTP": ce_ltp if ce_ltp else "API Req",
+                    "Trailing SL": active["sl"] if (active and active["side"] == "CE") else "-"
+                },
+                {
+                    "Contract": pe_sym,
+                    "Signal": "ACTIVE BUY" if (active and active["side"] == "PE") else "WAIT",
+                    "Entry": active["entry"] if (active and active["side"] == "PE") else "-",
+                    "Live LTP": pe_ltp if pe_ltp else "API Req",
+                    "Trailing SL": active["sl"] if (active and active["side"] == "PE") else "-"
+                }
+            ])
+
+    if sideways_count >= 4 and st.session_state.bot_running:
+        st.warning("⚠️ MARKET SIDEWAYS ALERT: 4+ Indices tight range mein hain—naye orders automatically hold par hain.")
+
+    total_pnl = round(st.session_state.realized_pnl + unrealized_pnl, 2)
+
+    if total_pnl <= st.session_state.max_loss_limit and st.session_state.bot_running:
+        execute_emergency_square_off(f"Max Loss Limit Crossed (₹{total_pnl:,.2f})")
+
+    st.markdown("---")
+    st.subheader("💰 Total Net P&L (All 5 Indices Combined)")
+    pnl_color = "#22C55E" if total_pnl >= 0 else "#EF4444"
+    st.markdown(f"<h2 style='color: {pnl_color};'>{'🟢' if total_pnl >= 0 else '🔴'} ₹{total_pnl:,.2f}</h2>", unsafe_allow_html=True)
+
+    st.markdown("---")
+    st.subheader("⚙️ Engine & Safety Controls")
+    if st.session_state.bot_running:
+        st.info("🟢 SHIELD ACTIVE (Auto-managed: 09:15 - 03:15)")
+    else:
+        st.error("🔴 SHIELD STOPPED / SQUARED OFF")
+
+    c1, c2 = st.columns(2)
+    with c1:
+        if st.button("▶️ Start / Resume Shield", use_container_width=True):
+            if not is_market_open:
+                st.error("Market abhi band hai (09:15 - 03:15 ke beech hi start hoga).")
+            else:
+                st.session_state.bot_running = True
+                st.session_state.danger_alarm = False
+                add_log("▶️ Multi-Index Shield Started")
+                st.rerun()
+    with c2:
+        if st.button("🚨 Emergency Square Off", type="primary", use_container_width=True):
+            execute_emergency_square_off("User Pressed Emergency Kill Switch!")
+            st.rerun()
+
+st.markdown("---")
