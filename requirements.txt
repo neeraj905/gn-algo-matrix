@@ -8,3 +8,4 @@ pyotp
 logzero
 websocket-client
 streamlit-autorefresh
+extra-streamlit-components
