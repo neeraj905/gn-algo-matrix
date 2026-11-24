@@ -228,3 +228,4 @@ class MultiBrokerHandler:
                     for p in pos["data"]:
                         net = int(p.get("netqty", 0))
                         if net != 0:
+            
