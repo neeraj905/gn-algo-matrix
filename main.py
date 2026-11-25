@@ -217,12 +217,12 @@ st.markdown("""
     [data-testid="stExpander"] summary, [data-testid="stExpander"] p, td, th { color: #F8FAFC !important; }
     [data-testid="stMetricValue"] { color: #38BDF8 !important; }
     button[kind="secondary"] { background-color: #1E293B !important; color: #F8FAFC !important; border: 1px solid #475569 !important; }
-        header[data-testid="stHeader"] { background: transparent !important; }
-    [data-testid="stToolbar"], [data-testid="stDecoration"], .stDeployButton, #GithubIcon { display: none !important; }
-    .viewerBadge_container__1QSob, .viewerBadge_link__1S137, [data-testid="manage-app-button"], footer { display: none !important; }
-    [data-testid="stSidebarCollapsedControl"] { color: #F8FAFC !important; background-color: #1E293B !important; border-radius: 8px !important; }
+        header[data-testid="stHeader"] { background-color: #0F172A !important; }
+    [data-testid="stToolbar"], [data-testid="stDecoration"], .stDeployButton, #GithubIcon { visibility: hidden !important; width: 0px !important; }
+    [data-testid="stSidebarCollapsedControl"] { background-color: #1E293B !important; border: 1px solid #38BDF8 !important; border-radius: 8px !important; }
+    [data-testid="stSidebarCollapsedControl"] svg { fill: #FFFFFF !important; color: #FFFFFF !important; }
     
-    
+
     </style>
 """, unsafe_allow_html=True)
 
