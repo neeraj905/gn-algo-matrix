@@ -213,6 +213,11 @@ st.markdown("""
         border: 3px solid #FCA5A5; text-align: center; font-weight: 900; font-size: 1.1rem;
         animation: blinker 1s linear infinite; margin-bottom: 15px;
     }
+        [data-testid="stExpander"] { background-color: #1E293B !important; border: 1px solid #334155 !important; border-radius: 10px !important; }
+    [data-testid="stExpander"] summary, [data-testid="stExpander"] p, td, th { color: #F8FAFC !important; }
+    [data-testid="stMetricValue"] { color: #38BDF8 !important; }
+    button[kind="secondary"] { background-color: #1E293B !important; color: #F8FAFC !important; border: 1px solid #475569 !important; }
+    
     </style>
 """, unsafe_allow_html=True)
 
