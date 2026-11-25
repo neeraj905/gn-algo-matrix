@@ -223,6 +223,7 @@ st.markdown("""
     [data-testid="stSidebarCollapsedControl"] svg { fill: #FFFFFF !important; color: #FFFFFF !important; }
     
 
+
     </style>
 """, unsafe_allow_html=True)
 
