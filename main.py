@@ -48,7 +48,8 @@ def add_log(msg):
     ts = ist_now.strftime("%H:%M:%S")
     st.session_state.logs.insert(0, f"[{ts}] {msg}")
     st.session_state.logs = st.session_state.logs[:80]
-    if not st.session_state.broker_connected and "session" in st.query_params:
+
+if not st.session_state.broker_connected and "session" in st.query_params:
     try:
         raw_b64 = st.query_params["session"]
         decoded = json.loads(base64.urlsafe_b64decode(raw_b64.encode()).decode())
@@ -125,8 +126,8 @@ st.markdown('<div class="golden-title">ALGO TRADING PORTAL</div>', unsafe_allow_
 st.markdown('<div class="subtitle">Multi-Broker & Multi-Index Pro • Nifty, BankNifty, FinNifty, Midcap & Sensex Shield</div>', unsafe_allow_html=True)
 
 menu_option = st.radio("Navigation", ["📊 Live Dashboard", "🔑 Broker Account Settings", "📜 Execution Logs"], horizontal=True, label_visibility="collapsed")
-st.markdown(
-    "---")
+st.markdown("---")
+
 if st.session_state.danger_alarm:
     st.markdown(f'<div class="danger-beacon">🚨 KHATRE KI GHANTI 🚨<br><span style="font-size:0.9rem;">{st.session_state.danger_reason}</span></div>', unsafe_allow_html=True)
     if st.button("🔕 Alarm Band Karein"):
@@ -183,101 +184,4 @@ if menu_option == "🔑 Broker Account Settings":
         new_creds["password"] = st.text_input("MPIN", value=prev.get("password", ""), type="password")
         new_creds["totp_secret"] = st.text_input("TOTP Secret Key", value=prev.get("totp_secret", ""), type="password")
     elif chosen_broker == "Dhan":
-        new_creds["client_id"] = st.text_input("Dhan Client ID", value=prev.get("client_id", ""))
-        new_creds["access_token"] = st.text_input("Dhan Access Token", value=prev.get("access_token", ""), type="password")
-    elif chosen_broker in ["Zerodha Kite", "Upstox"]:
-        new_creds["client_id"] = st.text_input(f"{chosen_broker} User ID", value=prev.get("client_id", ""))
-        new_creds["api_key"] = st.text_input("API Key", value=prev.get("api_key", ""), type="password")
-        new_creds["access_token"] = st.text_input("Daily Access Token", value=prev.get("access_token", ""), type="password")
-
-    if st.button("💾 Save & Connect Broker", use_container_width=True):
-        if all(str(v).strip() for v in new_creds.values()):
-            with st.spinner(f"Connecting to {chosen_broker}..."):
-                handler = MultiBrokerHandler(chosen_broker, new_creds)
-                ok, msg = handler.connect()
-                if ok:
-                    st.session_state.broker_connected = True
-                    st.session_state.selected_broker = chosen_broker
-                    st.session_state.creds = new_creds
-                    st.session_state.broker_handler = handler
-                    payload = json.dumps({"broker_name": chosen_broker, "creds": new_creds})
-                    st.query_params["session"] = base64.urlsafe_b64encode(payload.encode()).decode()
-                    add_log(f"Connected {chosen_broker}: {new_creds.get('client_id')}")
-                    st.success(f"{msg} (Saved!)")
-                    st.rerun()
-                else:
-                    st.error(f"Failed: {msg}")
-        else:
-            st.warning("Kripya saari fields bharein.")
-
-    if st.session_state.broker_connected:
-        st.success(f"🟢 Connected: {st.session_state.selected_broker} ({st.session_state.creds.get('client_id')})")
-        if st.button("🗑️ Disconnect & Clear Account"):
-            st.query_params.clear()
-            st.session_state.broker_connected = False
-            st.session_state.creds = {}
-            st.session_state.broker_handler = None
-            st.rerun()
-
-elif menu_option == "📜 Execution Logs":
-    st.subheader("📜 Live Execution & Safety Logs")
-    for log in st.session_state.logs or ["Abhi koi log nahi hai."]:
-        st.text(log)
-
-else:
-    st.subheader("📊 Multi-Index Live Strategy Matrix (All 5 Indices)")
-    engine = st.session_state.market_engine
-    handler = st.session_state.broker_handler
-    unrealized_pnl = 0.0
-    sideways_count = 0
-
-    for idx_name in INDEX_CONFIG.keys():
-        spot, chg_pct = engine.get_live_spot_and_change(idx_name, handler)
-        signal = engine.evaluate_signal(chg_pct)
-        if signal == "SIDEWAYS":
-            sideways_count += 1
-        ce_contract, pe_contract = engine.get_atm_option_contracts(idx_name, spot) if spot else (None, None)
-        ce_sym = ce_contract["symbol"] if ce_contract else f"{idx_name} ATM CE"
-        pe_sym = pe_contract["symbol"] if pe_contract else f"{idx_name} ATM PE"
-        ce_ltp = handler.get_ltp(ce_contract["exchange"], ce_sym, ce_contract["token"]) if (handler and hasattr(handler, "get_ltp") and ce_contract) else None
-        pe_ltp = handler.get_ltp(pe_contract["exchange"], pe_sym, pe_contract["token"]) if (handler and hasattr(handler, "get_ltp") and pe_contract) else None
-        active = st.session_state.active_trades.get(idx_name)
-        idx_pnl = 0.0
-
-        if active:
-            curr_ltp = ce_ltp if active["side"] == "CE" else pe_ltp
-            if curr_ltp:
-                idx_pnl = round((curr_ltp - active["entry"]) * active["qty"], 2)
-                new_sl = round(curr_ltp * 0.88, 2)
-                if new_sl > active["sl"]:
-                    active["sl"] = new_sl
-                if curr_ltp <= active["sl"] or curr_ltp >= active["target"]:
-                    if st.session_state.trading_mode == "LIVE REAL MONEY" and handler:
-                        handler.place_limit_order(active["symbol"], active["token"], "SELL", active["qty"], max(0.05, curr_ltp * 0.98), active["exchange"])
-                    st.session_state.realized_pnl += idx_pnl
-                    add_log(f"EXIT {active['symbol']} @ ₹{curr_ltp} | P&L: ₹{idx_pnl}")
-                    del st.session_state.active_trades[idx_name]
-                    active = None
-
-        if not active and st.session_state.bot_running and is_market_open and signal in ["BUY_CE", "BUY_PE"]:
-            chosen = ce_contract if signal == "BUY_CE" else pe_contract
-            entry_ltp = ce_ltp if signal == "BUY_CE" else pe_ltp
-            if chosen and entry_ltp and entry_ltp > 5.0:
-                qty = chosen["lot_size"] * int(st.session_state.lots_per_index)
-                if (entry_ltp * qty) <= risk_cap:
-                    order_ok = True
-                    if st.session_state.trading_mode == "LIVE REAL MONEY" and handler:
-                        order_ok, oid = handler.place_limit_order(chosen["symbol"], chosen["token"], "BUY", qty, round(entry_ltp * 1.01, 2), chosen["exchange"])
-                        add_log(f"LIVE BUY {chosen['symbol']} ({qty}) -> {oid}")
-                    else:
-                        add_log(f"PAPER BUY {chosen['symbol']} ({qty}) @ ₹{entry_ltp}")
-                    if order_ok:
-                        st.session_state.active_trades[idx_name] = {"symbol": chosen["symbol"], "token": chosen["token"], "exchange": chosen["exchange"], "side": "CE" if signal == "BUY_CE" else "PE", "entry": entry_ltp, "qty": qty, "sl": round(entry_ltp * 0.85, 2), "target": round(entry_ltp * 1.30, 2)}
-
-        unrealized_pnl += idx_pnl
-        spot_str = f"{spot:,.2f} ({chg_pct:+.2f}%)" if spot else "Fetching..."
-        status_badge = "🟡 SIDEWAYS" if signal == "SIDEWAYS" else ("🟢 BULLISH" if signal == "BUY_CE" else "🔴 BEARISH")
-        with st.expander(f"📈 {idx_name} | Spot: {spot_str} | {status_badge}", expanded=True):
-            st.table([
-                {"Contract": ce_sym, "Signal": "ACTIVE BUY" if (active and active["side"] == "CE") else "WAIT", "Entry": active["entry"] if (active and active["side"] == "CE") else "-", "Live LTP": ce_ltp if ce_ltp else "API Req", "Trailing SL": active["sl"] if (active and active["side"] == "CE") else "-"},
-
+                 
