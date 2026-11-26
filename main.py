@@ -217,11 +217,9 @@ st.markdown("""
     [data-testid="stExpander"] summary, [data-testid="stExpander"] p, td, th { color: #F8FAFC !important; }
     [data-testid="stMetricValue"] { color: #38BDF8 !important; }
     button[kind="secondary"] { background-color: #1E293B !important; color: #F8FAFC !important; border: 1px solid #475569 !important; }
-        header[data-testid="stHeader"] { background-color: #0F172A !important; }
-    [data-testid="stToolbar"], [data-testid="stDecoration"], .stDeployButton, #GithubIcon { visibility: hidden !important; width: 0px !important; }
-    [data-testid="stSidebarCollapsedControl"] { background-color: #1E293B !important; border: 1px solid #38BDF8 !important; border-radius: 8px !important; }
-    [data-testid="stSidebarCollapsedControl"] svg { fill: #FFFFFF !important; color: #FFFFFF !important; }
-    
+        header[data-testid="stHeader"], [data-testid="stToolbar"], [data-testid="stDecoration"], .stDeployButton, #GithubIcon { display: none !important; }
+    footer { display: none !important; }
+
 
 
     </style>
@@ -230,6 +228,13 @@ st.markdown("""
 # --- Header ---
 st.markdown('<div class="golden-title">ALGO TRADING PORTAL</div>', unsafe_allow_html=True)
 st.markdown('<div class="subtitle">Multi-Broker & Multi-Index Pro • Nifty, BankNifty, FinNifty, Midcap & Sensex Shield</div>', unsafe_allow_html=True)
+menu_option = st.radio(
+    "Navigation",
+    ["Dashboard & Index Matrix", "Broker Account Settings", "Execution Logs"],
+    horizontal=True,
+    label_visibility="collapsed"
+)
+
 
 # --- Blinking Red Danger Light ---
 if st.session_state.danger_alarm:
