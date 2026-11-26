@@ -24,22 +24,7 @@ def get_market_status():
 
 is_market_open, market_msg, ist_now = get_market_status()
 
-defaults = {
-    "broker_connected": False,
-    "selected_broker": "Angel One",
-    "creds": {},
-    "broker_handler": None,
-    "market_engine": MultiIndexLiveEngine(),
-    "bot_running": False,
-    "danger_alarm": False,
-    "danger_reason": "",
-    "trading_mode": "PAPER (Safe Test)",
-    "max_loss_limit": -5000.0,
-    "lots_per_index": 1,
-    "active_trades": {},
-    "realized_pnl": 0.0,
-    "logs": []
-}
+defaults = {"broker_connected": False, "selected_broker": "Angel One", "creds": {}, "broker_handler": None, "market_engine": MultiIndexLiveEngine(), "bot_running": False, "danger_alarm": False, "danger_reason": "", "trading_mode": "PAPER (Safe Test)", "max_loss_limit": -5000.0, "lots_per_index": 1, "active_trades": {}, "realized_pnl": 0.0, "logs": []}
 for k, v in defaults.items():
     if k not in st.session_state:
         st.session_state[k] = v
@@ -70,23 +55,7 @@ if not st.session_state.broker_connected and "session" in st.query_params:
 def trigger_danger_alarm(reason):
     st.session_state.danger_alarm = True
     st.session_state.danger_reason = reason
-    components.html("""
-        <script>
-        try {
-            const ctx = new (window.AudioContext || window.webkitAudioContext)();
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.type = 'sawtooth';
-            osc.frequency.setValueAtTime(920, ctx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(420, ctx.currentTime + 0.6);
-            gain.gain.setValueAtTime(0.35, ctx.currentTime);
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            osc.start();
-            osc.stop(ctx.currentTime + 0.9);
-        } catch(e) {}
-        </script>
-    """, height=0)
+    components.html("<script>try{const c=new(window.AudioContext||window.webkitAudioContext)();const o=c.createOscillator();const g=c.createGain();o.type='sawtooth';o.frequency.setValueAtTime(920,c.currentTime);o.frequency.exponentialRampToValueAtTime(420,c.currentTime+0.6);g.gain.setValueAtTime(0.35,c.currentTime);o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+0.9);}catch(e){}</script>", height=0)
 
 def execute_emergency_square_off(reason="Emergency Button Pressed"):
     st.session_state.bot_running = False
@@ -104,23 +73,8 @@ def execute_emergency_square_off(reason="Emergency Button Pressed"):
 if ist_now.time() >= dtime(15, 15) and st.session_state.bot_running:
     execute_emergency_square_off("03:15 PM Auto Market Close Square-Off")
 
-st.markdown("""
-    <style>
-    .stApp { background-color: #0F172A; color: #F8FAFC; }
-    header[data-testid="stHeader"], [data-testid="stToolbar"], [data-testid="stDecoration"], .stDeployButton, #GithubIcon { display: none !important; }
-    footer { display: none !important; }
-    .golden-title { font-size: 2.2rem !important; font-weight: 900 !important; background: linear-gradient(90deg, #BF953F, #FCF6BA, #B38728, #FBF5B7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-align: center; margin-bottom: 0px; }
-    .subtitle { text-align: center; color: #94A3B8; font-size: 0.9rem; margin-bottom: 15px; }
-    .shield-box { background-color: #1E293B; border: 1px solid #334155; padding: 14px; border-radius: 10px; margin-bottom: 12px; }
-    @keyframes blinker { 50% { opacity: 0.2; background-color: #7F1D1D; } }
-    .danger-beacon { background-color: #DC2626; color: #FFFFFF; padding: 16px; border-radius: 10px; border: 3px solid #FCA5A5; text-align: center; font-weight: 900; font-size: 1.1rem; animation: blinker 1s linear infinite; margin-bottom: 15px; }
-    [data-testid="stExpander"] { background-color: #1E293B !important; border: 1px solid #334155 !important; border-radius: 10px !important; }
-    [data-testid="stExpander"] summary, [data-testid="stExpander"] p, td, th, label, [data-testid="stRadio"] p { color: #F8FAFC !important; font-weight: 600 !important; }
-    [data-testid="stMetricValue"] { color: #38BDF8 !important; }
-    [data-testid="stMetricLabel"] p { color: #94A3B8 !important; }
-    button[kind="secondary"] { background-color: #1E293B !important; color: #F8FAFC !important; border: 1px solid #475569 !important; }
-    </style>
-""", unsafe_allow_html=True)
+css_code = "<style>.stApp{background-color:#0F172A;color:#F8FAFC;}header[data-testid='stHeader'],[data-testid='stToolbar'],[data-testid='stDecoration'],.stDeployButton,#GithubIcon,footer{display:none!important;}.golden-title{font-size:2.2rem!important;font-weight:900!important;background:linear-gradient(90deg,#BF953F,#FCF6BA,#B38728,#FBF5B7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-align:center;margin-bottom:0px;}.subtitle{text-align:center;color:#94A3B8;font-size:0.9rem;margin-bottom:15px;}.shield-box{background-color:#1E293B;border:1px solid #334155;padding:14px;border-radius:10px;margin-bottom:12px;}@keyframes blinker{50%{opacity:0.2;background-color:#7F1D1D;}}.danger-beacon{background-color:#DC2626;color:#FFFFFF;padding:16px;border-radius:10px;border:3px solid #FCA5A5;text-align:center;font-weight:900;font-size:1.1rem;animation:blinker 1s linear infinite;margin-bottom:15px;}[data-testid='stExpander']{background-color:#1E293B!important;border:1px solid #334155!important;border-radius:10px!important;}[data-testid='stExpander'] summary,[data-testid='stExpander'] p,td,th,label,[data-testid='stRadio'] p{color:#F8FAFC!important;font-weight:600!important;}[data-testid='stMetricValue']{color:#38BDF8!important;}[data-testid='stMetricLabel'] p{color:#94A3B8!important;}button[kind='secondary']{background-color:#1E293B!important;color:#F8FAFC!important;border:1px solid #475569!important;}</style>"
+st.markdown(css_code, unsafe_allow_html=True)
 
 st.markdown('<div class="golden-title">ALGO TRADING PORTAL</div>', unsafe_allow_html=True)
 st.markdown('<div class="subtitle">Multi-Broker & Multi-Index Pro • Nifty, BankNifty, FinNifty, Midcap & Sensex Shield</div>', unsafe_allow_html=True)
@@ -163,7 +117,6 @@ if menu_option == "🔑 Broker Account Settings":
     st.session_state.trading_mode = st.radio("Trading Mode", ["PAPER (Safe Test)", "LIVE REAL MONEY"], index=0 if st.session_state.trading_mode == "PAPER (Safe Test)" else 1, horizontal=True)
     st.session_state.lots_per_index = st.number_input("Lots Per Index", min_value=1, max_value=20, value=int(st.session_state.lots_per_index))
     st.session_state.max_loss_limit = st.number_input("Max Daily Loss Alarm Limit (₹)", value=float(st.session_state.max_loss_limit), step=500.0)
-
     st.markdown("---")
     st.subheader("🔑 Select & Connect Your Broker")
     brokers_list = ["Angel One", "Kotak Neo", "Dhan", "Zerodha Kite", "Upstox"]
@@ -171,7 +124,6 @@ if menu_option == "🔑 Broker Account Settings":
     chosen_broker = st.selectbox("Apna Broker Chunein", brokers_list, index=default_idx)
     prev = st.session_state.creds
     new_creds = {}
-
     if chosen_broker == "Angel One":
         new_creds["client_id"] = st.text_input("Angel Client ID", value=prev.get("client_id", ""))
         new_creds["api_key"] = st.text_input("SmartAPI Key", value=prev.get("api_key", ""), type="password")
@@ -184,4 +136,38 @@ if menu_option == "🔑 Broker Account Settings":
         new_creds["password"] = st.text_input("MPIN", value=prev.get("password", ""), type="password")
         new_creds["totp_secret"] = st.text_input("TOTP Secret Key", value=prev.get("totp_secret", ""), type="password")
     elif chosen_broker == "Dhan":
-                 
+        new_creds["client_id"] = st.text_input("Dhan Client ID", value=prev.get("client_id", ""))
+        new_creds["access_token"] = st.text_input("Dhan Access Token", value=prev.get("access_token", ""), type="password")
+    elif chosen_broker in ["Zerodha Kite", "Upstox"]:
+        new_creds["client_id"] = st.text_input(f"{chosen_broker} User ID", value=prev.get("client_id", ""))
+        new_creds["api_key"] = st.text_input("API Key", value=prev.get("api_key", ""), type="password")
+        new_creds["access_token"] = st.text_input("Daily Access Token", value=prev.get("access_token", ""), type="password")
+
+    st.markdown("---")
+    st.subheader("💰 Total Net P&L (All 5 Indices Combined)")
+    pnl_color = "#22C55E" if total_pnl >= 0 else "#EF4444"
+    st.markdown(f"<h2 style='color: {pnl_color};'>{'🟢' if total_pnl >= 0 else '🔴'} ₹{total_pnl:,.2f}</h2>", unsafe_allow_html=True)
+    st.markdown("---")
+    st.subheader("⚙️ Engine & Safety Controls")
+    if st.session_state.bot_running:
+        st.info("🟢 SHIELD ACTIVE (Auto-managed: 09:15 - 03:15)")
+    else:
+        st.error("🔴 SHIELD STOPPED / SQUARED OFF")
+    c1, c2 = st.columns(2)
+    with c1:
+        if st.button("▶️ Start / Resume Shield", use_container_width=True):
+            if not is_market_open:
+                st.error("Market abhi band hai (09:15 - 03:15 ke beech hi start hoga).")
+            else:
+                st.session_state.bot_running = True
+                st.session_state.danger_alarm = False
+                add_log("▶️ Multi-Index Shield Started")
+                st.rerun()
+    with c2:
+        if st.button("🚨 Emergency Square Off", type="primary", use_container_width=True):
+            execute_emergency_square_off("User Pressed Emergency Kill Switch!")
+            st.rerun()
+
+st.markdown("---")
+st.markdown("<p style='text-align: center; color: #64748B; font-size: 0.85rem;'>Multi-Index Pro • Nifty, BankNifty, FinNifty, Midcap & Sensex Active</p>", unsafe_allow_html=True
+           )
