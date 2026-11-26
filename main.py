@@ -113,92 +113,12 @@ def execute_emergency_square_off(reason="Emergency Button Pressed"):
 if ist_now.time() >= dtime(15, 15) and st.session_state.bot_running:
     execute_emergency_square_off("03:15 PM Auto Market Close Square-Off")
 
-# --- Sidebar: Multi-Broker Account & Risk Settings ---
-st.sidebar.markdown("## 🛡️ MULTI-BROKER PRO MENU")
-menu_option = st.sidebar.selectbox(
-    "Navigation",
-    ["Dashboard & Index Matrix", "Broker Account Settings", "Execution Logs"]
-)
-
-st.sidebar.markdown("---")
-st.session_state.trading_mode = st.sidebar.radio(
-    "Trading Mode",
-    ["PAPER (Safe Test)", "LIVE REAL MONEY"],
-    index=0 if st.session_state.trading_mode == "PAPER (Safe Test)" else 1
-)
-st.session_state.lots_per_index = st.sidebar.number_input("Lots Per Index", min_value=1, max_value=20, value=int(st.session_state.lots_per_index))
-st.session_state.max_loss_limit = st.sidebar.number_input("Max Daily Loss Alarm Limit (₹)", value=float(st.session_state.max_loss_limit), step=500.0)
-
-if menu_option == "Broker Account Settings":
-    st.sidebar.markdown("---")
-    st.sidebar.subheader("🔑 Select & Connect Your Broker")
-    brokers_list = ["Angel One", "Kotak Neo", "Dhan", "Zerodha Kite", "Upstox"]
-    default_idx = brokers_list.index(st.session_state.selected_broker) if st.session_state.selected_broker in brokers_list else 0
-    chosen_broker = st.sidebar.selectbox("Apna Broker Chunein", brokers_list, index=default_idx)
-    
-    prev = st.session_state.creds
-    new_creds = {}
-
-    if chosen_broker == "Angel One":
-        new_creds["client_id"] = st.sidebar.text_input("Angel Client ID", value=prev.get("client_id", ""))
-        new_creds["api_key"] = st.sidebar.text_input("SmartAPI Key", value=prev.get("api_key", ""), type="password")
-        new_creds["password"] = st.sidebar.text_input("MPIN / Password", value=prev.get("password", ""), type="password")
-        new_creds["totp_secret"] = st.sidebar.text_input("TOTP Secret Key", value=prev.get("totp_secret", ""), type="password")
-
-    elif chosen_broker == "Kotak Neo":
-        new_creds["client_id"] = st.sidebar.text_input("Kotak UCC (Client ID)", value=prev.get("client_id", ""))
-        new_creds["mobile_number"] = st.sidebar.text_input("Registered Mobile (+91...)", value=prev.get("mobile_number", ""))
-        new_creds["access_token"] = st.sidebar.text_input("Neo Access Token", value=prev.get("access_token", ""), type="password")
-        new_creds["password"] = st.sidebar.text_input("MPIN", value=prev.get("password", ""), type="password")
-        new_creds["totp_secret"] = st.sidebar.text_input("TOTP Secret Key", value=prev.get("totp_secret", ""), type="password")
-
-    elif chosen_broker == "Dhan":
-        new_creds["client_id"] = st.sidebar.text_input("Dhan Client ID", value=prev.get("client_id", ""))
-        new_creds["access_token"] = st.sidebar.text_input("Dhan Access Token", value=prev.get("access_token", ""), type="password")
-
-    elif chosen_broker in ["Zerodha Kite", "Upstox"]:
-        new_creds["client_id"] = st.sidebar.text_input(f"{chosen_broker} User ID", value=prev.get("client_id", ""))
-        new_creds["api_key"] = st.sidebar.text_input("API Key", value=prev.get("api_key", ""), type="password")
-        new_creds["access_token"] = st.sidebar.text_input("Daily Access Token", value=prev.get("access_token", ""), type="password")
-
-    if st.sidebar.button("💾 Save & Connect Broker"):
-        if all(str(v).strip() for v in new_creds.values()):
-            with st.spinner(f"Connecting to {chosen_broker}..."):
-                handler = MultiBrokerHandler(chosen_broker, new_creds)
-                ok, msg = handler.connect()
-                if ok:
-                    st.session_state.broker_connected = True
-                    st.session_state.selected_broker = chosen_broker
-                    st.session_state.creds = new_creds
-                    st.session_state.broker_handler = handler
-                    
-                    payload = json.dumps({"broker_name": chosen_broker, "creds": new_creds})
-                    b64_token = base64.urlsafe_b64encode(payload.encode()).decode()
-                    st.query_params["session"] = b64_token
-                    
-                    add_log(f"Connected {chosen_broker}: {new_creds.get('client_id')}")
-                    st.sidebar.success(f"{msg} (Saved! Refresh par bhi data rahega)")
-                    st.rerun()
-                else:
-                    st.sidebar.error(f"Failed: {msg}")
-        else:
-            st.sidebar.warning("Kripya saari fields bharein.")
-
-if st.session_state.broker_connected:
-    st.sidebar.success(f"🟢 {st.session_state.selected_broker}: {st.session_state.creds.get('client_id')}")
-    if st.sidebar.button("🗑️ Disconnect & Clear Account"):
-        st.query_params.clear()
-        st.session_state.broker_connected = False
-        st.session_state.creds = {}
-        st.session_state.broker_handler = None
-        st.rerun()
-
-# --- Custom CSS ---
+# --- Custom CSS (Dark Theme + White Text + Hide GitHub Icon) ---
 st.markdown("""
     <style>
     .stApp { background-color: #0F172A; color: #F8FAFC; }
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
+    header[data-testid="stHeader"], [data-testid="stToolbar"], [data-testid="stDecoration"], .stDeployButton, #GithubIcon { display: none !important; }
+    footer { display: none !important; }
     .golden-title {
         font-size: 2.2rem !important; font-weight: 900 !important;
         background: linear-gradient(90deg, #BF953F, #FCF6BA, #B38728, #FBF5B7);
@@ -213,28 +133,25 @@ st.markdown("""
         border: 3px solid #FCA5A5; text-align: center; font-weight: 900; font-size: 1.1rem;
         animation: blinker 1s linear infinite; margin-bottom: 15px;
     }
-        [data-testid="stExpander"] { background-color: #1E293B !important; border: 1px solid #334155 !important; border-radius: 10px !important; }
-    [data-testid="stExpander"] summary, [data-testid="stExpander"] p, td, th { color: #F8FAFC !important; }
+    [data-testid="stExpander"] { background-color: #1E293B !important; border: 1px solid #334155 !important; border-radius: 10px !important; }
+    [data-testid="stExpander"] summary, [data-testid="stExpander"] p, td, th, label, [data-testid="stRadio"] p { color: #F8FAFC !important; font-weight: 600 !important; }
     [data-testid="stMetricValue"] { color: #38BDF8 !important; }
+    [data-testid="stMetricLabel"] p { color: #94A3B8 !important; }
     button[kind="secondary"] { background-color: #1E293B !important; color: #F8FAFC !important; border: 1px solid #475569 !important; }
-        header[data-testid="stHeader"], [data-testid="stToolbar"], [data-testid="stDecoration"], .stDeployButton, #GithubIcon { display: none !important; }
-    footer { display: none !important; }
-
-
-
     </style>
 """, unsafe_allow_html=True)
 
-# --- Header ---
+# --- Header & Main Screen Navigation ---
 st.markdown('<div class="golden-title">ALGO TRADING PORTAL</div>', unsafe_allow_html=True)
 st.markdown('<div class="subtitle">Multi-Broker & Multi-Index Pro • Nifty, BankNifty, FinNifty, Midcap & Sensex Shield</div>', unsafe_allow_html=True)
+
 menu_option = st.radio(
     "Navigation",
-    ["Dashboard & Index Matrix", "Broker Account Settings", "Execution Logs"],
+    ["📊 Live Dashboard", "🔑 Broker Account Settings", "📜 Execution Logs"],
     horizontal=True,
     label_visibility="collapsed"
 )
-
+st.markdown("---")
 
 # --- Blinking Red Danger Light ---
 if st.session_state.danger_alarm:
@@ -255,7 +172,7 @@ if st.session_state.broker_connected:
     user_sub = f"Active Mode: {st.session_state.trading_mode} (Device Isolated)"
 else:
     user_title = "GUEST / UNCONNECTED"
-    user_sub = "Sidebar (>>) mein 'Broker Account Settings' khol kar apna broker jodein"
+    user_sub = "Upar '🔑 Broker Account Settings' par tap karke apna broker jodein"
 
 st.markdown(f"""
     <div class="shield-box">
@@ -280,11 +197,86 @@ col1.metric("TOTAL BALANCE", f"₹{total_balance:,.2f}")
 col2.metric("25% RISK CAP", f"₹{risk_cap:,.2f}")
 col3.metric("75% SAFE RESERVE", f"₹{safe_reserve:,.2f}")
 
-# --- Main Content ---
-if menu_option == "Execution Logs":
+# --- TAB 2: Broker Account Settings (Direct Screen Form) ---
+if menu_option == "🔑 Broker Account Settings":
+    st.subheader("⚙️ Trading Mode & Risk Limits")
+    st.session_state.trading_mode = st.radio(
+        "Trading Mode",
+        ["PAPER (Safe Test)", "LIVE REAL MONEY"],
+        index=0 if st.session_state.trading_mode == "PAPER (Safe Test)" else 1,
+        horizontal=True
+    )
+    st.session_state.lots_per_index = st.number_input("Lots Per Index", min_value=1, max_value=20, value=int(st.session_state.lots_per_index))
+    st.session_state.max_loss_limit = st.number_input("Max Daily Loss Alarm Limit (₹)", value=float(st.session_state.max_loss_limit), step=500.0)
+
+    st.markdown("---")
+    st.subheader("🔑 Select & Connect Your Broker")
+    brokers_list = ["Angel One", "Kotak Neo", "Dhan", "Zerodha Kite", "Upstox"]
+    default_idx = brokers_list.index(st.session_state.selected_broker) if st.session_state.selected_broker in brokers_list else 0
+    chosen_broker = st.selectbox("Apna Broker Chunein", brokers_list, index=default_idx)
+    
+    prev = st.session_state.creds
+    new_creds = {}
+
+    if chosen_broker == "Angel One":
+        new_creds["client_id"] = st.text_input("Angel Client ID", value=prev.get("client_id", ""))
+        new_creds["api_key"] = st.text_input("SmartAPI Key", value=prev.get("api_key", ""), type="password")
+        new_creds["password"] = st.text_input("MPIN / Password", value=prev.get("password", ""), type="password")
+        new_creds["totp_secret"] = st.text_input("TOTP Secret Key", value=prev.get("totp_secret", ""), type="password")
+
+    elif chosen_broker == "Kotak Neo":
+        new_creds["client_id"] = st.text_input("Kotak UCC (Client ID)", value=prev.get("client_id", ""))
+        new_creds["mobile_number"] = st.text_input("Registered Mobile (+91...)", value=prev.get("mobile_number", ""))
+        new_creds["access_token"] = st.text_input("Neo Access Token", value=prev.get("access_token", ""), type="password")
+        new_creds["password"] = st.text_input("MPIN", value=prev.get("password", ""), type="password")
+        new_creds["totp_secret"] = st.text_input("TOTP Secret Key", value=prev.get("totp_secret", ""), type="password")
+
+    elif chosen_broker == "Dhan":
+        new_creds["client_id"] = st.text_input("Dhan Client ID", value=prev.get("client_id", ""))
+        new_creds["access_token"] = st.text_input("Dhan Access Token", value=prev.get("access_token", ""), type="password")
+
+    elif chosen_broker in ["Zerodha Kite", "Upstox"]:
+        new_creds["client_id"] = st.text_input(f"{chosen_broker} User ID", value=prev.get("client_id", ""))
+        new_creds["api_key"] = st.text_input("API Key", value=prev.get("api_key", ""), type="password")
+        new_creds["access_token"] = st.text_input("Daily Access Token", value=prev.get("access_token", ""), type="password")
+
+    if st.button("💾 Save & Connect Broker", use_container_width=True):
+        if all(str(v).strip() for v in new_creds.values()):
+            with st.spinner(f"Connecting to {chosen_broker}..."):
+                handler = MultiBrokerHandler(chosen_broker, new_creds)
+                ok, msg = handler.connect()
+                if ok:
+                    st.session_state.broker_connected = True
+                    st.session_state.selected_broker = chosen_broker
+                    st.session_state.creds = new_creds
+                    st.session_state.broker_handler = handler
+                    payload = json.dumps({"broker_name": chosen_broker, "creds": new_creds})
+                    b64_token = base64.urlsafe_b64encode(payload.encode()).decode()
+                    st.query_params["session"] = b64_token
+                    add_log(f"Connected {chosen_broker}: {new_creds.get('client_id')}")
+                    st.success(f"{msg} (Saved! Refresh par bhi data rahega)")
+                    st.rerun()
+                else:
+                    st.error(f"Failed: {msg}")
+        else:
+            st.warning("Kripya saari fields bharein.")
+
+    if st.session_state.broker_connected:
+        st.success(f"🟢 Connected: {st.session_state.selected_broker} ({st.session_state.creds.get('client_id')})")
+        if st.button("🗑️ Disconnect & Clear Account"):
+            st.query_params.clear()
+            st.session_state.broker_connected = False
+            st.session_state.creds = {}
+            st.session_state.broker_handler = None
+            st.rerun()
+
+# --- TAB 3: Execution Logs ---
+elif menu_option == "📜 Execution Logs":
     st.subheader("📜 Live Execution & Safety Logs")
     for log in st.session_state.logs or ["Abhi koi log nahi hai."]:
         st.text(log)
+
+# --- TAB 1: Live Dashboard ---
 else:
     st.subheader("📊 Multi-Index Live Strategy Matrix (All 5 Indices)")
     engine = st.session_state.market_engine
@@ -353,69 +345,4 @@ else:
                             "exchange": chosen["exchange"],
                             "side": "CE" if signal == "BUY_CE" else "PE",
                             "entry": entry_ltp,
-                            "qty": qty,
-                            "sl": round(entry_ltp * 0.85, 2),
-                            "target": round(entry_ltp * 1.30, 2)
-                        }
-
-        unrealized_pnl += idx_pnl
-        spot_str = f"{spot:,.2f} ({chg_pct:+.2f}%)" if spot else "Fetching..."
-        status_badge = "🟡 SIDEWAYS" if signal == "SIDEWAYS" else ("🟢 BULLISH" if signal == "BUY_CE" else "🔴 BEARISH")
-
-        with st.expander(f"📈 {idx_name} | Spot: {spot_str} | {status_badge}", expanded=True):
-            st.table([
-                {
-                    "Contract": ce_sym,
-                    "Signal": "ACTIVE BUY" if (active and active["side"] == "CE") else "WAIT",
-                    "Entry": active["entry"] if (active and active["side"] == "CE") else "-",
-                    "Live LTP": ce_ltp if ce_ltp else "API Req",
-                    "Trailing SL": active["sl"] if (active and active["side"] == "CE") else "-"
-                },
-                {
-                    "Contract": pe_sym,
-                    "Signal": "ACTIVE BUY" if (active and active["side"] == "PE") else "WAIT",
-                    "Entry": active["entry"] if (active and active["side"] == "PE") else "-",
-                    "Live LTP": pe_ltp if pe_ltp else "API Req",
-                    "Trailing SL": active["sl"] if (active and active["side"] == "PE") else "-"
-                }
-            ])
-
-    if sideways_count >= 4 and st.session_state.bot_running:
-        st.warning("⚠️ MARKET SIDEWAYS ALERT: 4+ Indices tight range mein hain—naye orders automatically hold par hain.")
-
-    total_pnl = round(st.session_state.realized_pnl + unrealized_pnl, 2)
-
-    if total_pnl <= st.session_state.max_loss_limit and st.session_state.bot_running:
-        execute_emergency_square_off(f"Max Loss Limit Crossed (₹{total_pnl:,.2f})")
-
-    st.markdown("---")
-    st.subheader("💰 Total Net P&L (All 5 Indices Combined)")
-    pnl_color = "#22C55E" if total_pnl >= 0 else "#EF4444"
-    st.markdown(f"<h2 style='color: {pnl_color};'>{'🟢' if total_pnl >= 0 else '🔴'} ₹{total_pnl:,.2f}</h2>", unsafe_allow_html=True)
-
-    st.markdown("---")
-    st.subheader("⚙️ Engine & Safety Controls")
-    if st.session_state.bot_running:
-        st.info("🟢 SHIELD ACTIVE (Auto-managed: 09:15 - 03:15)")
-    else:
-        st.error("🔴 SHIELD STOPPED / SQUARED OFF")
-
-    c1, c2 = st.columns(2)
-    with c1:
-        if st.button("▶️ Start / Resume Shield", use_container_width=True):
-            if not is_market_open:
-                st.error("Market abhi band hai (09:15 - 03:15 ke beech hi start hoga).")
-            else:
-                st.session_state.bot_running = True
-                st.session_state.danger_alarm = False
-                add_log("▶️ Multi-Index Shield Started")
-                st.rerun()
-    with c2:
-        if st.button("🚨 Emergency Square Off", type="primary", use_container_width=True):
-            execute_emergency_square_off("User Pressed Emergency Kill Switch!")
-            st.rerun()
-
-st.markdown("---")
-
-st.markdown("<p style='text-align: center; color: #64748B; font-size: 0.85rem;'>Multi-Index Pro • Nifty, BankNifty, FinNifty, Midcap & Sensex Active</p>", unsafe_allow_html=True)
-
+        
