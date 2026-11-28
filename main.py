@@ -248,22 +248,29 @@ else:
                     add_log(f"🛑 5% SL EXIT {active['symbol']} @ ₹{curr_ltp} | P&L: ₹{idx_pnl}")
                     del st.session_state.active_trades[idx_name]
                     active = None
+        used_budget = sum(t["entry"] * t["qty"] for t in st.session_state.active_trades.values())
+        remaining_budget = max(0.0, risk_cap - used_budget)
         if not active and st.session_state.bot_running and not st.session_state.capital_locked and is_market_open and signal in ["BUY_CE", "BUY_PE"]:
-            chosen = ce_contract if signal == "BUY_CE" else pe_contract
-            entry_ltp = ce_ltp if signal == "BUY_CE" else pe_ltp
-            if chosen and entry_ltp and entry_ltp > 5.0:
-                qty = chosen["lot_size"] * int(st.session_state.lots_per_index)
-                if (entry_ltp * qty) <= risk_cap:
-                    order_ok = True
-                    if st.session_state.trading_mode == "LIVE REAL MONEY" and handler:
-                        order_ok, oid = handler.place_limit_order(chosen["symbol"], chosen["token"], "BUY", qty, round(entry_ltp * 1.01, 2), chosen["exchange"])
-                        if not order_ok:
-                            trigger_danger_alarm(f"ORDER FAILED ({chosen['symbol']}): {oid}")
-                        add_log(f"LIVE BUY {chosen['symbol']} ({qty}) -> {oid}")
-                    else:
-                        add_log(f"PAPER BUY {chosen['symbol']} ({qty}) @ ₹{entry_ltp}")
-                    if order_ok:
-                        st.session_state.active_trades[idx_name] = {"symbol": chosen["symbol"], "token": chosen["token"], "exchange": chosen["exchange"], "side": "CE" if signal == "BUY_CE" else "PE", "entry": entry_ltp, "highest": entry_ltp, "qty": qty, "sl": round(entry_ltp * 0.95, 2)}
+            if st.session_state.trading_mode == "LIVE REAL MONEY" and not has_min_capital:
+                add_log("⚠️ Minimum ₹5,000 balance nahi hai — order skipped.")
+            else:
+                chosen = ce_contract if signal == "BUY_CE" else pe_contract
+                entry_ltp = ce_ltp if signal == "BUY_CE" else pe_ltp
+                if chosen and entry_ltp and entry_ltp > 5.0:
+                    qty = chosen["lot_size"] * int(st.session_state.lots_per_index)
+                    trade_cost = entry_ltp * qty
+                    if trade_cost <= remaining_budget:
+                        order_ok = True
+                        if st.session_state.trading_mode == "LIVE REAL MONEY" and handler:
+                            order_ok, oid = handler.place_limit_order(chosen["symbol"], chosen["token"], "BUY", qty, round(entry_ltp * 1.01, 2), chosen["exchange"])
+                            if not order_ok:
+                                trigger_danger_alarm(f"ORDER FAILED ({chosen['symbol']}): {oid}")
+                            add_log(f"LIVE BUY {chosen['symbol']} ({qty}) -> {oid}")
+                        else:
+                            add_log(f"PAPER BUY {chosen['symbol']} ({qty}) @ ₹{entry_ltp}")
+                        if order_ok:
+                            st.session_state.active_trades[idx_name] = {"symbol": chosen["symbol"], "token": chosen["token"], "exchange": chosen["exchange"], "side": "CE" if signal == "BUY_CE" else "PE", "entry": entry_ltp, "highest": entry_ltp, "qty": qty, "sl": round(entry_ltp * 0.95, 2)}
+                            
 
         unrealized_pnl += idx_pnl
         spot_val = f"{spot:,.2f} ({chg_pct:+.2f}%)" if spot else "Scanning..."
