@@ -91,8 +91,7 @@ st.markdown('<div class="golden-title">ALGO TRADING PORTAL</div>', unsafe_allow_
 st.markdown(f'<div class="subtitle">1-Sec Live Scanner #{st.session_state.scan_count} • 5% Trailing Profit & Capital Lock Shield</div>', unsafe_allow_html=True)
 
 menu_option = st.radio("Navigation", ["📊 Live Dashboard", "🔑 Broker Account Settings", "📜 Execution Logs"], horizontal=True, label_visibility="collapsed")
-st.ma
-rkdown("---")
+st.markdown("---")
 
 if st.session_state.danger_alarm:
     st.markdown(f'<div class="danger-beacon">🚨 KHATRE KI GHANTI / DANGER ALERT 🚨<br><span style="font-size:0.9rem;">{st.session_state.danger_reason}</span></div>', unsafe_allow_html=True)
