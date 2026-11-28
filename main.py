@@ -8,7 +8,7 @@ from market_engine import MultiIndexLiveEngine, INDEX_CONFIG
 from streamlit_autorefresh import st_autorefresh
 
 st.set_page_config(page_title="Algo Trading Portal - Institutional Shield", page_icon="🛡️", layout="centered")
-st_autorefresh(interval=1000, limit=None, key="live_1sec_scanner_refresh")
+
 
 def get_market_status():
     utc_now = datetime.now(timezone.utc)
@@ -194,7 +194,7 @@ elif menu_option == "📜 Execution Logs":
 
 else:
     st.subheader("📡 1-Second Live Market Scanner (All 5 Indices)")
-
+    st_autorefresh(interval=1000, limit=None, key="live_1sec_scanner_refresh")
 
     engine = st.session_state.market_engine
     handler = st.session_state.broker_handler
