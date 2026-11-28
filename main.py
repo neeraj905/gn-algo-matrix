@@ -244,9 +244,9 @@ else:
                     del st.session_state.active_trades[idx_name]
                     active = None
                     if not active and st.session_state.bot_running and not st.session_state.capital_locked and is_market_open and signal in ["BUY_CE", "BUY_PE"]:
-            chosen = ce_contract if signal == "BUY_CE" else pe_contract
-            entry_ltp = ce_ltp if signal == "BUY_CE" else pe_ltp
-            if chosen and entry_ltp and entry_ltp > 5.0:
+                chosen = ce_contract if signal == "BUY_CE" else pe_contract
+                entry_ltp = ce_ltp if signal == "BUY_CE" else pe_ltp
+                if chosen and entry_ltp and entry_ltp > 5.0:
                 qty = chosen["lot_size"] * int(st.session_state.lots_per_index)
                 if (entry_ltp * qty) <= risk_cap:
                     order_ok = True
