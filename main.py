@@ -200,7 +200,7 @@ elif menu_option == "📜 Execution Logs":
 
 else:
     st.subheader("📡 1-Second Live Market Scanner (All 5 Indices)")
-    st_autorefresh(interval=1000, limit=None, key="live_1sec_scanner_refresh")
+    st_autorefresh(interval=3000, limit=None, key="live_1sec_scanner_refresh")
 
     engine = st.session_state.market_engine
     handler = st.session_state.broker_handler
