@@ -120,14 +120,19 @@ if is_market_open:
 else:
     st.warning(f"🟠 {market_msg}")
 
-total_balance = st.session_state.broker_handler.get_balance() if st.session_state.broker_connected else 100000.0
+total_balance = st.session_state.broker_handler.get_balance() if st.session_state.broker_connected else 5000.0
 risk_cap = total_balance * 0.25
 safe_reserve = total_balance * 0.75
+has_min_capital = total_balance >= 5000.0
 
 col1, col2, col3 = st.columns(3)
 col1.metric("TOTAL BALANCE", f"₹{total_balance:,.2f}")
 col2.metric("25% RISK CAP", f"₹{risk_cap:,.2f}")
 col3.metric("75% SAFE RESERVE", f"₹{safe_reserve:,.2f}")
+
+if st.session_state.broker_connected and not has_min_capital:
+    st.error("⚠️ Minimum ₹5,000 Capital Zaroori Hai (Abhi balance ₹5,000 se kam hai — Live Trading locked).")
+
 
 if menu_option == "🔑 Broker Account Settings":
     st.subheader("⚙️ Trading Mode & Risk Limits")
